@@ -28,4 +28,9 @@ See [`explained/README.md`](explained/README.md) for the module guide, the missi
 
 ## Credits
 
-The AGC software was written at the MIT Instrumentation Laboratory, led by Margaret Hamilton (CM and LM flight software) and many others. The source here was transcribed by the [Virtual AGC](https://www.ibiblio.org/apollo/) project and comes from [chrislgarry/Apollo-11](https://github.com/chrislgarry/Apollo-11). The original AGC source is in the public domain (see [AGC-LICENSE.md](AGC-LICENSE.md)).
+The AGC software was written at the MIT Instrumentation Laboratory, led by Margaret Hamilton (CM and LM flight software) and many others. The source here was transcribed by the [Virtual AGC](https://www.ibiblio.org/apollo/) project and comes from [chrislgarry/Apollo-11](https://github.com/chrislgarry/Apollo-11).
+
+## Licence
+
+- `Comanche055/` and `Luminary099/`: the original AGC source, in the public domain (see [AGC-LICENSE.md](AGC-LICENSE.md)).
+- `explained/` (the Python walkthroughs, figures and live viewer): [MIT](explained/LICENSE).
