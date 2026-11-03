@@ -88,7 +88,7 @@ EVENTS = [
     ("liftoff", LIFTOFF, "Lunar liftoff", "Liftoff", "LM", "The ascent stage lifts off; P12 steers it into lunar orbit."),
     ("csi", get(125, 19, 35), "Concentric sequence initiation", "CSI", "LM", "First rendezvous burn, near apolune, sets up a constant height below Columbia."),
     ("cdh", get(126, 17, 46), "Constant delta height", "CDH", "LM", "Small burn that makes Eagle's orbit coelliptic with Columbia's."),
-    ("tpi", get(126, 57, 0), "Terminal phase initiation", "TPI", "LM", "Eagle thrusts along the line of sight to intercept Columbia."),
+    ("tpi", get(127, 3, 52), "Terminal phase initiation", "TPI", "LM", "Eagle thrusts along the line of sight to intercept Columbia."),
     ("docking", get(128, 3, 0), "Docking in lunar orbit", "Dock", "CM", "Eagle and Columbia dock again; the crew transfers with the samples."),
     ("lm-jettison", get(130, 9, 31), "LM jettison", "Jettison", "CM", "The empty ascent stage is released and its computer goes quiet."),
     ("tei", get(135, 23, 42), "Transearth injection", "TEI", "CM", "Behind the Moon, a 2.5-minute SPS burn heads Columbia home."),
@@ -101,6 +101,12 @@ EV = {e[0]: e[1] for e in EVENTS}
 END = EV["splashdown"] + 60
 LM_ON = get(96, 0, 0)  # approx.: LM computer powered up for checkout
 LM_OFF = EV["lm-jettison"]
+# Final approach, from the Apollo Flight Journal (Day 6, part 2) and the crew's technical debrief.
+BRAKE = get(127, 36, 57)      # braking sequence starts
+BRAKE_END = get(127, 51, 36)  # braking done, station-keeping ("We're station-keeping", 127:52:05)
+COLLINS = get(127, 54, 11)    # "Okay, Mike, I'll get - try to get in position here, and then you got it."
+CONTACT = get(128, 0, 0)      # probe touches the drogue (approx.: "about 5 feet" at 127:59:14, closing ~0.1 ft/s)
+RETRACT = EV["docking"] - 12  # probe retract, the LM swings, latches snap shut at 128:03:00
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +122,7 @@ def build_phases():
         ("descent", "Powered descent and landing", PDI, EV["touchdown"] + 30, "descent", "LM", 95),
         ("surface", "Tranquility Base", EV["touchdown"] + 30, LIFTOFF, "surface", "LM", 18),
         ("ascent", "Ascent to lunar orbit", LIFTOFF, LIFTOFF + 494, "ascent", "LM", 24),
-        ("rendezvous", "Rendezvous and docking", LIFTOFF + 494, EV["docking"] + 300, "rendezvous", "LM", 32),
+        ("rendezvous", "Rendezvous and docking", LIFTOFF + 494, EV["docking"] + 300, "rendezvous", "LM", 53),
         ("lunar-orbit-2", "Last lunar orbits and TEI", EV["docking"] + 300, EV["tei"] + 151 + 1800, "lunar-orbit", "CM", 20),
         ("transearth", "Transearth coast", EV["tei"] + 151 + 1800, EV["cm-sm-sep"], "cislunar", "CM", 28),
         ("entry", "Entry and splashdown", EV["cm-sm-sep"], END, "entry", "CM", 42),
@@ -132,7 +138,8 @@ def build_phases():
         "translunar": [(EV["mcc-2"] - 300, EV["mcc-2"] + 300, 3)],
         "transearth": [(EV["mcc-5"] - 300, EV["mcc-5"] + 300, 3)],
         "surface": [(EV["eva-start"], EV["eva-end"], 7)],
-        "rendezvous": [(EV["tpi"] - 60, EV["docking"] + 300, 14)],
+        "rendezvous": [(EV["tpi"] - 60, BRAKE_END - 300, 10), (BRAKE_END - 300, COLLINS, 8),
+                       (COLLINS, CONTACT, 10), (CONTACT, EV["docking"] + 30, 7)],
     }
     knots = [(0.0, 0.0)]
     tp = 0.0
@@ -462,31 +469,91 @@ def track_rendezvous(dsky):
     s = quiet(m_rdz.simulate_rendezvous)
     b = s["burns"]
     ins = LIFTOFF + 434  # insertion (124:29:15)
-    tpf = EV["tpi"] + 2580  # ~43 min transfer to braking (approx.)
     legs = [("x_ins_csi", "z_ins_csi", ins, EV["csi"]), ("x_csi_cdh", "z_csi_cdh", EV["csi"], EV["cdh"]),
-            ("x_cdh_tpi", "z_cdh_tpi", EV["cdh"], EV["tpi"]), ("x_tpi_tpf", "z_tpi_tpf", EV["tpi"], tpf)]
+            ("x_cdh_tpi", "z_cdh_tpi", EV["cdh"], EV["tpi"])]
     G, X, Z = [], [], []
     for xk, zk, g0, g1 in legs:
         n = len(s[xk])
         G += list(np.linspace(g0, g1, n))
         X += list(s[xk])
         Z += list(s[zk])
+    # Terminal phase: the simulated intercept path (lm_03), retimed so Eagle is 15.2 km out at
+    # 127:36:14 as Armstrong called it. From there braking replaces the sim's free intercept: Eagle
+    # keeps to the simulated line of sight while the range follows the crew's calls.
+    xt, zt = np.asarray(s["x_tpi_tpf"]), np.asarray(s["z_tpi_tpf"])
+    rt = np.hypot(xt, zt)
+    k15 = int(np.argmax(rt <= 15.2))
+    G += list(np.linspace(EV["tpi"], get(127, 36, 14), k15 + 1))[1:]
+    X += list(xt[1:k15 + 1])
+    Z += list(zt[1:k15 + 1])
+    calls = [  # (GET, range km)
+        (get(127, 36, 14), 15.2),   # "8.2 miles, 40 feet per second"
+        (get(127, 41, 21), 2.8),    # "a mile-and-a-half"
+        (get(127, 43, 43), 1.3),    # "0.7 mile ... 31 feet per second"
+        (get(127, 46, 13), 0.42),   # "about 11 feet a second coming in at you" (range approx.)
+        (get(127, 49, 30), 0.07),   # (approx.)
+        (BRAKE_END, 0.025),         # braking stops at 50 to 100 feet
+        (get(127, 52, 30), 0.013),  # station-keeping ~40 ft off Columbia's nose
+        (COLLINS, 0.012),
+        (get(127, 58, 42), 0.0046),  # "He's about 15 feet out now."
+        (get(127, 59, 14), 0.0015),  # "About 5 feet, I guess."
+        (CONTACT, 0.0),
+    ]
+    # line of sight as a function of range, from the simulated intercept (inside its last point, keep its direction)
+    order = np.argsort(rt)
+    ux, uz = xt / np.maximum(rt, 1e-9), zt / np.maximum(rt, 1e-9)
+    near = order[rt[order] > 0][0]
+    for a, b2 in zip(calls[:-1], calls[1:]):
+        for g in np.linspace(a[0], b2[0], 14)[1:]:
+            r = float(np.interp(g, [a[0], b2[0]], [a[1], b2[1]]))
+            if r > rt[near]:
+                j = order[np.searchsorted(rt[order], r)]
+                dx, dz = ux[j], uz[j]
+            else:
+                dx, dz = ux[near], uz[near]
+            G.append(g)
+            X.append(r * dx)
+            Z.append(r * dz)
     G += [EV["docking"]]
     X += [0.0]
     Z += [0.0]
+    stages = [
+        dict(get=ins, label="Catching up", text="Eagle starts in a lower, faster orbit and gains on Columbia; CSI and CDH set it 15 nmi below."),
+        dict(get=EV["tpi"], label="Terminal phase", text="TPI aims Eagle along the line of sight; two small midcourse burns keep it on the line."),
+        dict(get=BRAKE, label="Braking", text="Armstrong brakes at fixed range gates, slowing from 12 m/s to a few cm/s."),
+        dict(get=BRAKE_END, label="Station-keeping", text="Eagle holds about 40 ft off Columbia's nose and turns its docking hatch toward it."),
+        dict(get=COLLINS, label="Columbia closes in", text="Collins takes over and flies the probe into Eagle's drogue at about 0.1 ft/s."),
+        dict(get=CONTACT, label="Capture", text="Probe in the drogue, capture latches hold. Eagle is so light Collins barely feels it."),
+        dict(get=RETRACT, label="Retract", text="The probe retracts, Eagle's attitude hold fights it and the stack swings for a few seconds."),
+        dict(get=EV["docking"], label="Docked", text="Twelve docking latches snap shut. \"We're all yours, Columbia.\""),
+    ]
     tr = dict(frame="Eagle relative to Columbia (CSM-centred LVLH), km", x_label="Along track (km, + ahead of Columbia)",
-              y_label="Radial (km, + above Columbia)", get=r1(G), x=r1(X, 2), z=r1(Z, 2),
+              y_label="Radial (km, + above Columbia)", get=r1(G), x=r1(X, 5), z=r1(Z, 5),
               burns=[dict(id="csi", get=EV["csi"], dv_ms=round(b["dv_csi"], 1)),
                      dict(id="cdh", get=EV["cdh"], dv_ms=round(b["dv_cdh"], 1)),
-                     dict(id="tpi", get=EV["tpi"], dv_ms=round(float(np.hypot(*s["dv_tpi"])), 1))],
-              note="Relative motion from the rendezvous simulation (lm_03), each leg retimed to the real burn times. "
-                   "Braking at ~127:40 GET is approx.")
+                     dict(id="tpi", get=EV["tpi"], dv_ms=round(float(np.hypot(*s["dv_tpi"])), 1)),
+                     dict(id="mcc 2", get=get(127, 33, 31), dv_ms=0.4),
+                     dict(id="braking", get=BRAKE, dv_ms=None)],
+              # Eagle's turn to the docking attitude, shown in the drawing plane: 0 = its front (radar,
+              # windows) toward Columbia, 90 = its top hatch and drogue toward Columbia.
+              lm_att=dict(get=r1([BRAKE_END + 30, get(127, 55, 20)]), deg=[0, 90]),
+              stages=stages, contact=CONTACT, retract=RETRACT, collins=COLLINS, brake=BRAKE, brake_end=BRAKE_END,
+              lm_size_m=dict(w=4.3, h=3.8), csm_size_m=dict(length=11.0, d=3.9),
+              note="Relative motion from the rendezvous simulation (lm_03), retimed to the real burns; braking, "
+                   "station-keeping and docking follow the crew's range calls in the Flight Journal (approx.).")
     for bid, prog, dv in [("csi", "32", (b["dv_csi"], 0.0)), ("cdh", "33", (b["dv_cdh"], 0.0)), ("tpi", "34", tuple(s["dv_tpi"]))]:
         dsky.append(dict(get=EV[bid] - 600, computer="LM", prog=prog, verb="06", noun="81",
                          r=[reg(dv[0] * FT * 10, 0), reg(0, 0), reg(-dv[1] * FT * 10, 0)], lights=[], flash=True, simulated=True,
                          caption=f"P{prog} targeting, V06N81: ΔV in local-vertical axes (ft/s, xxxx.x) for the {bid.upper()} burn, flashing for the crew to accept."))
         dsky.append(dict(get=EV[bid] + 60, computer="LM", prog="20", verb="16", noun="45", r=["", "", ""], lights=[],
                          flash=False, simulated=False, caption="P20 rendezvous navigation in the background: the radar marks Columbia and the filter updates the state (registers not simulated)."))
+    dsky.append(dict(get=get(127, 43, 2), computer="LM", prog="47", verb="16", noun="83", r=["", "", ""], lights=[],
+                     flash=False, simulated=False,
+                     caption="\"Okay, let's put P47 in.\" The thrust monitor counts the ΔV of each braking burn (registers not simulated)."))
+    dsky.append(dict(get=get(127, 53, 25), computer="LM", prog="47", verb="16", noun="83", r=["", "", ""],
+                     lights=["GIMBAL LOCK", "NO ATT"], flash=False, simulated=False,
+                     caption="Turning Eagle to its docking attitude drove the IMU's middle gimbal into gimbal lock. "
+                             "Armstrong finished the docking on the backup AGS."))
     return tr
 
 

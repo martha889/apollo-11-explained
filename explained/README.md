@@ -31,7 +31,7 @@ python explained/mission.py --only lm_02    # Run a single phase by short ID, mo
 
 [`live/`](live/) holds an animated, single-page replay of the whole flight, from launch to splashdown, on the real mission clock. It has three linked panels:
 
-- **Trajectory**: the spacecraft's path, with a view that changes with each phase (Earth orbit, the Earth–Moon figure-8, lunar orbit, the descent profile, rendezvous, entry).
+- **Trajectory**: the spacecraft's path, with a view that changes with each phase (Earth orbit, the Earth–Moon figure-8, lunar orbit, the descent profile, a to-scale animation of Eagle catching and docking with Columbia, entry).
 - **Guidance computers**: Columbia's and Eagle's DSKYs as the crew saw them. They show the program, verb, noun, registers and warning lights, including the 1202/1201 alarms.
 - **Voice loop**: what the crew and Mission Control said at that moment, with the real recordings (30 clips of NASA's air-to-ground audio; the clock waits while someone speaks, and the Sound button turns it off), verbatim and timed to the GET, from NASA's transcripts as published in the [Apollo Flight Journal](https://apollojournals.org/afj/) and [Apollo Lunar Surface Journal](https://apollojournals.org/alsj/) (lines and sources in [`live/transcript.json`](live/transcript.json); each clip's source file and time window in [`live/audio/clips.json`](live/audio/clips.json), cut by [`live/tools/cut_audio.py`](live/tools/cut_audio.py)).
 - **Code**: the AGC source that was running at that moment, quoted line for line from `Comanche055/` and `Luminary099/`, next to its Python translation from this folder.
