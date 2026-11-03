@@ -1,0 +1,1125 @@
+<title>Apollo 11 Live</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: mission-control console at night. Trajectory scope on the left,
+   the two DSKYs and the program listing on the right, transport bar fixed at the bottom. */
+:root {
+  color-scheme: dark;
+  --bg: #0d121b;
+  --panel: #131a26;
+  --panel-2: #182132;
+  --line: #26324a;
+  --fg: #dbe3ef;
+  --muted: #8593a8;
+  --faint: #4b5870;
+  --amber: #f2b13c;
+  --amber-dim: #6b5124;
+  --alarm: #ff5a4f;
+  --el: #9bf28a;
+  --el-dim: rgba(155, 242, 138, 0.045);
+  --el-bg: #0b120c;
+  --lamp-white: #eef0e6;
+  --csm: #6cc3ff;
+  --lm: #f2b13c;
+  --earth: #3d7fd9;
+  --moon: #b9bcc4;
+  --dsky-body: #3a3d42;
+  --dsky-edge: #2c2f33;
+  --dsky-lamp-off: #4a4d52;
+  --dsky-text-off: #6d7076;
+  --p63: #6cc3ff;
+  --p64: #f2b13c;
+  --p66: #ff7a6b;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  --bar-h: 112px;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+.app > * { min-width: 0; }
+.app {
+  grid-template-columns: minmax(0, 1fr);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px calc(var(--bar-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  display: grid;
+  gap: 12px;
+}
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 28px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.brand { display: flex; flex-direction: column; min-width: 0; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; }
+.brand span { color: var(--muted); font-size: 12px; }
+.clock { display: flex; flex-direction: column; min-width: 0; }
+.label { font-family: var(--font-display); font-weight: 600; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.clock .get { font-family: var(--font-mono); font-weight: 500; font-size: 30px; line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.clock .utc { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.now { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.now .phase { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: 0.03em; }
+.now .event { color: var(--muted); font-size: 13px; text-wrap: balance; }
+.now .event b { color: var(--amber); font-weight: 600; }
+
+/* Stage */
+.stage { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; min-width: 0; display: flex; flex-direction: column; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.panel-head h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
+.panel-head .sub { color: var(--muted); font-size: 12px; text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.traj { min-height: 460px; height: max(460px, calc(100vh - 210px)); height: max(460px, calc(100dvh - 210px)); }
+.traj .canvas-wrap { position: relative; flex: 1; min-height: 0; }
+.traj canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.event-strip { border-top: 1px solid var(--line); padding: 8px 12px; min-height: 40px; display: flex; gap: 10px; align-items: baseline; transition: background-color 0.6s; }
+.event-strip.new { background: rgba(242, 177, 60, 0.1); }
+.event-strip b { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
+.event-strip .t { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.event-strip span:last-child { min-width: 0; }
+
+.right { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-width: 0; height: max(460px, calc(100vh - 210px)); height: max(460px, calc(100dvh - 210px)); }
+
+/* DSKYs */
+.dskys { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.dsky-card { min-width: 0; display: flex; flex-direction: column; gap: 6px; container-type: inline-size; }
+.dsky-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dsky-title h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
+.dsky-title .sw { color: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+.badge { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted); border-radius: 3px; padding: 0 6px; }
+.dsky-card.active .badge { border-color: var(--amber); color: var(--amber); }
+.dsky { background: var(--dsky-body); border: 2px solid var(--dsky-edge); border-radius: 6px; padding: 3cqi; display: grid; grid-template-columns: 40% 1fr; gap: 3cqi; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+.dsky-card.active .dsky { border-color: var(--amber-dim); }
+.lamps { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 1.6cqi; background: var(--dsky-edge); padding: 1.6cqi; border-radius: 3px; }
+.lamp { display: flex; align-items: center; justify-content: center; text-align: center; background: var(--dsky-lamp-off); color: var(--dsky-text-off); font-family: var(--font-display); font-weight: 600; font-size: 3.2cqi; line-height: 1; letter-spacing: 0.04em; border-radius: 1.5px; padding: 0.8cqi 0.4cqi; min-height: 7cqi; }
+.lamp.blank { color: transparent; }
+.lamp.on.white { background: var(--lamp-white); color: #23252a; box-shadow: 0 0 6px rgba(238, 240, 230, 0.45); }
+.lamp.on.amber { background: var(--amber); color: #2b1d05; box-shadow: 0 0 8px rgba(242, 177, 60, 0.55); }
+.el { background: var(--el-bg); border-radius: 3px; padding: 2cqi; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4cqi 2cqi; align-content: start; }
+.el .cell { display: flex; flex-direction: column; align-items: center; gap: 0.6cqi; }
+.el .tag { background: var(--el); color: var(--el-bg); font-family: var(--font-display); font-weight: 700; font-size: 2.8cqi; letter-spacing: 0.08em; padding: 0.2cqi 1.2cqi; border-radius: 1px; line-height: 1.2; }
+.el .tag.off { background: rgba(155, 242, 138, 0.1); color: rgba(155, 242, 138, 0.25); }
+.el .compacty { grid-row: span 1; width: 100%; height: 100%; min-height: 9cqi; display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 2.8cqi; line-height: 1.1; letter-spacing: 0.06em; border-radius: 1px; background: rgba(155, 242, 138, 0.08); color: rgba(155, 242, 138, 0.2); }
+.el .compacty.on { background: var(--el); color: var(--el-bg); }
+.el .reg { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.8cqi; }
+.el .bar { height: 0.6cqi; background: rgba(155, 242, 138, 0.25); border-radius: 1px; }
+.digits { display: flex; justify-content: flex-end; gap: 0.5cqi; }
+.digits svg { width: 5.4cqi; height: 9cqi; }
+.cell .digits svg { width: 5.4cqi; }
+.seg { fill: var(--el-dim); }
+.seg.on { fill: var(--el); filter: drop-shadow(0 0 1.5px rgba(155, 242, 138, 0.6)); }
+.dsky.off .seg.on { fill: var(--el-dim); filter: none; }
+.dsky.off .tag { background: rgba(155, 242, 138, 0.1); color: rgba(155, 242, 138, 0.2); }
+.dsky.off .bar { background: rgba(155, 242, 138, 0.08); }
+.blink-hidden .seg.on { fill: var(--el-dim); filter: none; }
+.caption { color: var(--muted); font-size: 12px; line-height: 1.4; min-height: 3.6em; }
+.caption .src { display: inline-block; font-family: var(--font-display); font-weight: 600; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 2px; padding: 0 4px; margin-right: 6px; border: 1px solid var(--line); color: var(--muted); }
+.caption .src.sim { border-color: var(--el); color: var(--el); }
+.dsky-toggle { display: none; gap: 6px; }
+
+/* Code */
+.code { min-height: 0; }
+.code-head { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.code-head .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.code-head h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 18px; letter-spacing: 0.03em; text-wrap: balance; }
+.code-head .file { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.tabs { display: flex; gap: 4px; }
+.tab { background: transparent; border: 1px solid var(--line); border-radius: 3px; padding: 2px 10px; font-family: var(--font-display); font-weight: 600; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { border-color: var(--amber); color: var(--amber); }
+.listing { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 8px 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.55; background: var(--panel-2); }
+.listing .ln { display: block; white-space: pre; padding: 0 12px 0 0; }
+.listing .no { display: inline-block; width: 5.2em; padding-right: 1em; text-align: right; color: var(--faint); user-select: none; position: sticky; left: 0; background: var(--panel-2); }
+.listing .cm { color: #7f8ea6; }
+.listing .lb { color: var(--amber); }
+.listing .kw { color: var(--csm); }
+.listing .ln.cur { background: rgba(242, 177, 60, 0.14); }
+.listing .ln.cur .no { color: var(--amber); background: #2a2417; }
+.listing .ln.entry .no { color: var(--amber); }
+.code-foot { padding: 8px 12px 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.code-foot p { margin: 0; max-width: 70ch; }
+.code-foot .note { color: var(--muted); font-size: 11.5px; }
+
+/* Transport */
+.transport {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  background: rgba(13, 18, 27, 0.97); border-top: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: 8px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  display: grid; gap: 6px;
+}
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; height: 32px; min-width: 36px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--font-display); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; font-size: 13px; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { border-color: var(--amber); color: var(--amber); min-width: 84px; }
+.btn svg { width: 14px; height: 14px; fill: currentColor; }
+.speed { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.speed button { background: var(--panel-2); border: 0; border-right: 1px solid var(--line); height: 30px; padding: 0 9px; cursor: pointer; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.speed button:last-child { border-right: 0; }
+.speed button[aria-pressed="true"] { color: var(--amber); background: rgba(242, 177, 60, 0.1); }
+.jump { height: 32px; max-width: 260px; min-width: 0; flex: 0 1 260px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 3px; padding: 0 6px; }
+.ptime { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: auto; }
+.scrub { position: relative; height: 34px; }
+.bands { position: absolute; left: 0; right: 0; top: 14px; height: 10px; display: flex; border-radius: 2px; overflow: hidden; }
+.bands div { height: 100%; border-right: 1px solid var(--bg); }
+.bands div.cm { background: #1d3550; }
+.bands div.lm { background: #4a3a1c; }
+.bands div.cur.cm { background: #2c5a86; }
+.bands div.cur.lm { background: #7a5d24; }
+.ticks { position: absolute; left: 0; right: 0; top: 0; height: 34px; pointer-events: none; }
+.ticks i { position: absolute; top: 10px; width: 1px; height: 18px; background: var(--muted); opacity: 0.7; }
+.ticks i.major { background: var(--fg); opacity: 0.9; }
+.ticks span { position: absolute; top: -2px; transform: translateX(-50%); font-family: var(--font-display); font-weight: 600; font-size: 10.5px; letter-spacing: 0.05em; color: var(--muted); white-space: nowrap; }
+.progress { position: absolute; top: 8px; width: 2px; height: 22px; background: var(--amber); box-shadow: 0 0 6px rgba(242, 177, 60, 0.7); pointer-events: none; }
+.scrub input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.scrub input:focus-visible + .focusring { outline: 2px solid var(--amber); outline-offset: 2px; }
+.focusring { position: absolute; inset: 0; pointer-events: none; border-radius: 2px; }
+
+@media (max-width: 1100px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .traj { height: 62vh; min-height: 380px; }
+  .right { height: auto; grid-template-rows: auto auto; }
+  .code .listing { max-height: 460px; }
+}
+@media (max-width: 700px) {
+  :root { --bar-h: 132px; }
+  .dskys { grid-template-columns: minmax(0, 1fr); }
+  .dsky-toggle { display: flex; }
+  .dskys[data-show="CM"] .dsky-card[data-c="LM"], .dskys[data-show="LM"] .dsky-card[data-c="CM"] { display: none; }
+  .clock .get { font-size: 24px; }
+  .ticks span { display: none; }
+  .ptime { margin-left: 0; }
+  .jump { flex: 1 1 100%; max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-strip { transition: none; }
+}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Apollo 11 Live</h1>
+      <span>Columbia &amp; Eagle, July 16–24, 1969</span>
+    </div>
+    <div class="clock" aria-live="off">
+      <span class="label">Ground elapsed time</span>
+      <span class="get" id="get">000:00:00</span>
+      <span class="utc" id="utc">1969-07-16 13:32:00 UTC</span>
+    </div>
+    <div class="now">
+      <span class="label" id="phase-step">Phase 1 of 12</span>
+      <span class="phase" id="phase">Launch</span>
+      <span class="event" id="event"></span>
+    </div>
+  </header>
+
+  <main class="stage">
+    <section class="panel traj" aria-label="Trajectory">
+      <div class="panel-head"><h2 id="scene-title">Trajectory</h2><span class="sub" id="scene-frame"></span></div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="scope" role="img" aria-label="Animated trajectory of the spacecraft"></canvas>
+      </div>
+      <div class="event-strip" id="toast" aria-live="polite"></div>
+    </section>
+
+    <div class="right">
+      <section class="panel" aria-label="Guidance computers">
+        <div class="panel-head">
+          <h2>Guidance computers (DSKY)</h2>
+          <div class="dsky-toggle" role="group" aria-label="Choose DSKY">
+            <button class="tab" id="show-cm" aria-label="Show Columbia's DSKY" aria-selected="true">Columbia</button>
+            <button class="tab" id="show-lm" aria-label="Show Eagle's DSKY" aria-selected="false">Eagle</button>
+          </div>
+        </div>
+        <div class="dskys" id="dskys" data-show="CM" style="padding: 10px 12px 12px;">
+          <div class="dsky-card" data-c="CM" id="card-CM">
+            <div class="dsky-title"><h3>Columbia · CM</h3><span class="sw">Comanche055</span><span class="badge" id="badge-CM">Active</span></div>
+            <div class="dsky" id="dsky-CM"></div>
+            <div class="caption" id="cap-CM"></div>
+          </div>
+          <div class="dsky-card" data-c="LM" id="card-LM">
+            <div class="dsky-title"><h3>Eagle · LM</h3><span class="sw">Luminary099</span><span class="badge" id="badge-LM">Off</span></div>
+            <div class="dsky" id="dsky-LM"></div>
+            <div class="caption" id="cap-LM"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel code" aria-label="Code being executed">
+        <div class="code-head">
+          <div class="row">
+            <span class="label" id="code-comp">Columbia · Comanche055</span>
+            <div class="tabs" role="tablist" aria-label="Source language">
+              <button class="tab" role="tab" id="tab-agc" aria-label="Show AGC assembly source" aria-selected="true">AGC source</button>
+              <button class="tab" role="tab" id="tab-py" aria-label="Show Python translation" aria-selected="false">Python</button>
+            </div>
+          </div>
+          <h2 id="code-title">P11</h2>
+          <span class="file" id="code-file"></span>
+        </div>
+        <pre class="listing" id="listing" tabindex="0" aria-label="Source listing"></pre>
+        <div class="code-foot">
+          <p id="code-explain"></p>
+          <p class="note">The highlight steps through the routine at an illustrative pace. The real computer ran these routines over and over, for example SERVICER every 2 seconds.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="transport" role="region" aria-label="Playback controls">
+  <div class="controls">
+    <button class="btn" id="prev" aria-label="Previous event" title="Previous event (Left arrow)"><svg viewBox="0 0 16 16"><path d="M3 2h2v12H3zM14 2v12L6 8z"/></svg></button>
+    <button class="btn primary" id="play" aria-label="Play" title="Play or pause (Space)"><svg viewBox="0 0 16 16" id="play-icon"><path d="M4 2l10 6-10 6z"/></svg><span id="play-text">Play</span></button>
+    <button class="btn" id="next" aria-label="Next event" title="Next event (Right arrow)"><svg viewBox="0 0 16 16"><path d="M11 2h2v12h-2zM2 2v12l8-6z"/></svg></button>
+    <div class="speed" role="group" aria-label="Playback speed">
+      <button id="speed-0-5" data-s="0.5" aria-pressed="false" aria-label="Half speed">0.5×</button>
+      <button id="speed-1" data-s="1" aria-pressed="true" aria-label="Normal speed">1×</button>
+      <button id="speed-2" data-s="2" aria-label="Double speed" aria-pressed="false">2×</button>
+      <button id="speed-4" data-s="4" aria-label="Four times speed" aria-pressed="false">4×</button>
+    </div>
+    <select class="jump" id="jump" aria-label="Jump to event"></select>
+    <span class="ptime" id="ptime">0:00 / 0:00</span>
+  </div>
+  <div class="scrub">
+    <div class="bands" id="bands"></div>
+    <div class="ticks" id="ticks"></div>
+    <div class="progress" id="progress"></div>
+    <input type="range" id="scrub" min="0" max="1000" step="0.01" value="0" aria-label="Mission timeline">
+    <div class="focusring"></div>
+  </div>
+</div>
+
+<script id="mission-data" type="application/json">__MISSION_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("mission-data").textContent);
+  var $ = function (id) { return document.getElementById(id); };
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var css = getComputedStyle(document.documentElement);
+  var C = {};
+  ["bg", "panel", "panel-2", "line", "fg", "muted", "faint", "amber", "alarm", "el", "csm", "lm", "earth", "moon", "p63", "p64", "p66"].forEach(function (k) {
+    C[k] = css.getPropertyValue("--" + k).trim();
+  });
+
+  // ---------- time map ----------
+  var TM = D.timemap;
+  var TOTAL = TM[TM.length - 1][1];
+  var GET_END = TM[TM.length - 1][0];
+  function interp(arr, x, ix, iy) {
+    if (x <= arr[0][ix]) return arr[0][iy];
+    var lo = 0, hi = arr.length - 1;
+    if (x >= arr[hi][ix]) return arr[hi][iy];
+    while (hi - lo > 1) { var m = (lo + hi) >> 1; if (arr[m][ix] <= x) lo = m; else hi = m; }
+    var a = arr[lo], b = arr[hi];
+    return a[iy] + (b[iy] - a[iy]) * (x - a[ix]) / (b[ix] - a[ix]);
+  }
+  function playToGet(p) { return interp(TM, p, 1, 0); }
+  function getToPlay(g) { return interp(TM, g, 0, 1); }
+
+  // ---------- helpers ----------
+  function pad(n, w) { n = String(n); while (n.length < w) n = "0" + n; return n; }
+  function fmtGET(g) {
+    g = Math.max(0, Math.floor(g));
+    return pad(Math.floor(g / 3600), 3) + ":" + pad(Math.floor(g / 60) % 60, 2) + ":" + pad(g % 60, 2);
+  }
+  var LAUNCH_MS = Date.parse(D.meta.launch_utc);
+  function fmtUTC(g) {
+    var d = new Date(LAUNCH_MS + Math.floor(g) * 1000);
+    return d.toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  }
+  function fmtPlay(p) { p = Math.max(0, Math.floor(p)); return Math.floor(p / 60) + ":" + pad(p % 60, 2); }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function bsearch(arr, x) { // last index with arr[i] <= x, or -1
+    var lo = 0, hi = arr.length - 1, r = -1;
+    while (lo <= hi) { var m = (lo + hi) >> 1; if (arr[m] <= x) { r = m; lo = m + 1; } else hi = m - 1; }
+    return r;
+  }
+  function sampleTrack(get, keys, g) { // linear interpolation of several arrays by GET
+    var i = bsearch(get, g), out = {};
+    if (i < 0) i = 0;
+    var j = Math.min(i + 1, get.length - 1);
+    var f = j === i ? 0 : Math.max(0, Math.min(1, (g - get[i]) / (get[j] - get[i])));
+    keys.forEach(function (k) { out[k[0]] = k[1][i] + (k[1][j] - k[1][i]) * f; });
+    out.i = i; out.f = f;
+    return out;
+  }
+  function phaseAt(g) {
+    var P = D.phases;
+    for (var i = 0; i < P.length; i++) if (g < P[i].get_end) return i;
+    return P.length - 1;
+  }
+  var EVENTS = D.events;
+  var EV = {}; EVENTS.forEach(function (e) { EV[e.id] = e; });
+  function lastEvent(g) { var r = null; for (var i = 0; i < EVENTS.length; i++) if (EVENTS[i].get <= g + 0.01) r = EVENTS[i]; return r; }
+
+  // ---------- state ----------
+  var state = { play: 0, playing: false, speed: 1, dirty: true, lastEvent: null };
+
+  // ---------- DSKY ----------
+  var SEGS = { a: [2.4, 0.6, 7.2, 1.7], b: [9.7, 2.3, 1.7, 7.2], c: [9.7, 10.5, 1.7, 7.2], d: [2.4, 17.7, 7.2, 1.7], e: [0.6, 10.5, 1.7, 7.2], f: [0.6, 2.3, 1.7, 7.2], g: [2.4, 9.15, 7.2, 1.7] };
+  var DIG = { "0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc", "5": "afgcd", "6": "afgedc", "7": "abc", "8": "abcdefg", "9": "abcdfg" };
+  function digitSVG(kind) {
+    var s = '<svg viewBox="0 0 12 20" aria-hidden="true">';
+    if (kind === "sign") {
+      s += '<rect class="seg" data-s="h" x="1.4" y="9.15" width="9.2" height="1.7" rx="0.8"/>';
+      s += '<rect class="seg" data-s="v" x="5.15" y="4.6" width="1.7" height="10.8" rx="0.8"/>';
+    } else {
+      for (var k in SEGS) { var r = SEGS[k]; s += '<rect class="seg" data-s="' + k + '" x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '" rx="0.8"/>'; }
+    }
+    return s + "</svg>";
+  }
+  function setDigit(svg, ch) {
+    var lit = DIG[ch] || "";
+    var segs = svg.querySelectorAll(".seg");
+    for (var i = 0; i < segs.length; i++) segs[i].classList.toggle("on", lit.indexOf(segs[i].getAttribute("data-s")) >= 0);
+  }
+  function setSign(svg, ch) {
+    var segs = svg.querySelectorAll(".seg");
+    segs[0].classList.toggle("on", ch === "+" || ch === "-");
+    segs[1].classList.toggle("on", ch === "+");
+  }
+  var LAMPS = {
+    CM: [["UPLINK ACTY", "white"], ["TEMP", "amber"], ["NO ATT", "white"], ["GIMBAL LOCK", "amber"], ["STBY", "white"], ["PROG", "amber"], ["KEY REL", "white"], ["RESTART", "amber"], ["OPR ERR", "white"], ["TRACKER", "amber"], ["", "white"], ["", "amber"], ["", "white"], ["", "amber"]],
+    LM: [["UPLINK ACTY", "white"], ["TEMP", "amber"], ["NO ATT", "white"], ["GIMBAL LOCK", "amber"], ["STBY", "white"], ["PROG", "amber"], ["KEY REL", "white"], ["RESTART", "amber"], ["OPR ERR", "white"], ["TRACKER", "amber"], ["", "white"], ["ALT", "amber"], ["", "white"], ["VEL", "amber"]]
+  };
+  var DS = {};
+  function buildDsky(c) {
+    var root = $("dsky-" + c);
+    var h = '<div class="lamps">';
+    LAMPS[c].forEach(function (l) { h += '<div class="lamp ' + l[1] + (l[0] ? "" : " blank") + '" data-l="' + l[0] + '">' + (l[0] ? l[0].replace(" ", "<br>") : "&nbsp;") + "</div>"; });
+    h += '</div><div class="el">';
+    h += '<div class="compacty" data-x="ca">COMP<br>ACTY</div>';
+    h += '<div class="cell"><span class="tag">PROG</span><div class="digits" data-x="prog">' + digitSVG() + digitSVG() + "</div></div>";
+    h += '<div class="cell"><span class="tag">VERB</span><div class="digits" data-x="verb">' + digitSVG() + digitSVG() + "</div></div>";
+    h += '<div class="cell"><span class="tag">NOUN</span><div class="digits" data-x="noun">' + digitSVG() + digitSVG() + "</div></div>";
+    for (var r = 0; r < 3; r++) {
+      h += '<div class="reg"><div class="bar"></div><div class="digits" data-x="r' + r + '">' + digitSVG("sign") + digitSVG() + digitSVG() + digitSVG() + digitSVG() + digitSVG() + "</div></div>";
+    }
+    h += "</div>";
+    root.innerHTML = h;
+    var q = function (x) { return root.querySelector('[data-x="' + x + '"]'); };
+    DS[c] = {
+      root: root, ca: q("ca"), prog: q("prog"), verb: q("verb"), noun: q("noun"), r: [q("r0"), q("r1"), q("r2")],
+      lamps: Array.prototype.slice.call(root.querySelectorAll(".lamp")), key: null, frames: [], gets: []
+    };
+  }
+  buildDsky("CM"); buildDsky("LM");
+  D.dsky.forEach(function (k) { DS[k.computer].frames.push(k); });
+  ["CM", "LM"].forEach(function (c) { DS[c].frames.sort(function (a, b) { return a.get - b.get; }); DS[c].gets = DS[c].frames.map(function (k) { return k.get; }); });
+
+  function writePair(el, s) {
+    var svgs = el.querySelectorAll("svg");
+    s = s || "  ";
+    setDigit(svgs[0], s[0]); setDigit(svgs[1], s[1]);
+  }
+  function writeReg(el, s) {
+    var svgs = el.querySelectorAll("svg");
+    if (!s) s = "      ";
+    setSign(svgs[0], s[0]);
+    for (var i = 1; i < 6; i++) setDigit(svgs[i], s[i]);
+  }
+  function lmOn(g) { return D.lm_power.some(function (p) { return g >= p[0] && g < p[1]; }); }
+  function updateDsky(c, g, activeComp, blinkOn) {
+    var d = DS[c];
+    var on = c === "CM" || lmOn(g);
+    var i = bsearch(d.gets, g);
+    var k = on && i >= 0 ? d.frames[i] : null;
+    var key = on ? (k ? k.get + "|" + k.prog + k.verb + k.noun + k.r.join(",") + k.lights.join(",") : "idle") : "off";
+    if (key !== d.key) {
+      d.key = key;
+      d.root.classList.toggle("off", !on);
+      var src = "";
+      if (!on) {
+        writePair(d.prog, ""); writePair(d.verb, ""); writePair(d.noun, "");
+        d.r.forEach(function (el) { writeReg(el, ""); });
+        d.lamps.forEach(function (l) { l.classList.remove("on"); });
+        $("cap-" + c).innerHTML = '<span class="src">Off</span>Eagle\'s computer is powered down.';
+      } else if (!k) {
+        writePair(d.prog, "00"); writePair(d.verb, ""); writePair(d.noun, "");
+        d.r.forEach(function (el) { writeReg(el, ""); });
+        d.lamps.forEach(function (l) { l.classList.remove("on"); });
+        $("cap-" + c).innerHTML = '<span class="src">Not simulated</span>P00: idle.';
+      } else {
+        writePair(d.prog, k.prog); writePair(d.verb, k.verb); writePair(d.noun, k.noun);
+        for (var r = 0; r < 3; r++) writeReg(d.r[r], k.r[r]);
+        d.lamps.forEach(function (l) { l.classList.toggle("on", k.lights.indexOf(l.getAttribute("data-l")) >= 0 && l.getAttribute("data-l") !== ""); });
+        src = k.simulated ? '<span class="src sim">Simulated</span>' : '<span class="src">Not simulated</span>';
+        $("cap-" + c).innerHTML = src + esc(k.caption);
+      }
+      d.flash = !!(k && k.flash);
+    }
+    // Flashing verb/noun (the real DSKY flashed them to ask for crew input)
+    var hide = d.flash && !blinkOn && !reduceMotion;
+    d.verb.classList.toggle("blink-hidden", hide);
+    d.noun.classList.toggle("blink-hidden", hide);
+    // COMP ACTY flickers while the computer is busy (simulated phases) or while burning
+    var busy = on && k && k.simulated && state.playing ? (Math.random() < 0.35) : (on && k && k.simulated && (Math.floor(performance.now() / 700) % 3 === 0));
+    if (reduceMotion) busy = on && k && k.simulated;
+    d.ca.classList.toggle("on", !!busy);
+    var act = c === activeComp;
+    $("card-" + c).classList.toggle("active", act);
+    $("badge-" + c).textContent = !on ? "Off" : act ? "Active" : "Standby";
+  }
+
+  // ---------- code panel ----------
+  var codeState = { idx: -1, tab: "agc", cur: -1, lines: [] };
+  function highlightAGC(line) {
+    var hashAt = line.indexOf("#");
+    var body = hashAt >= 0 ? line.slice(0, hashAt) : line, cm = hashAt >= 0 ? line.slice(hashAt) : "";
+    var out = "";
+    if (body && !/^\s/.test(body)) {
+      var m = body.match(/^(\S+)(.*)$/);
+      out += '<span class="lb">' + esc(m[1]) + "</span>";
+      body = m[2];
+    }
+    out += body.replace(/^(\s+)(\S+)/, function (_, sp, op) { return esc(sp) + '<span class="kw">' + esc(op) + "</span>"; }).replace(/&(?!amp;|lt;|gt;)/g, "&amp;");
+    if (cm) out += '<span class="cm">' + esc(cm) + "</span>";
+    return out;
+  }
+  function highlightPy(line) {
+    var t = esc(line);
+    var hashAt = line.indexOf("#");
+    if (/^\s*(\"\"\"|''')/.test(line) || /^\s*#/.test(line)) return '<span class="cm">' + t + "</span>";
+    t = t.replace(/\b(def|return|for|in|if|elif|else|while|import|from|with|as|and|or|not|None|True|False|lambda)\b/g, '<span class="kw">$1</span>');
+    if (hashAt > 0) {
+      var e = esc(line.slice(hashAt));
+      var ix = t.lastIndexOf(e);
+      if (ix >= 0) t = t.slice(0, ix) + '<span class="cm">' + e + "</span>";
+    }
+    return t;
+  }
+  function renderListing() {
+    var step = D.code[codeState.idx];
+    var src = codeState.tab === "agc" ? step.agc : step.python;
+    var L = $("listing");
+    if (!src) {
+      L.innerHTML = '<span class="ln"><span class="no"></span><span class="cm">No Python translation of this routine in explained/. The AGC listing is on the other tab.</span></span>';
+      $("code-file").textContent = "";
+      codeState.lines = []; codeState.exec = [];
+      return;
+    }
+    var h = "", exec = [];
+    src.lines.forEach(function (ln, i) {
+      var isCode = codeState.tab === "agc" ? (ln.trim() !== "" && !/^\s*#/.test(ln)) : (ln.trim() !== "" && !/^\s*(#|\"\"\"|''')/.test(ln));
+      if (isCode) exec.push(i);
+      h += '<span class="ln' + (i === 0 ? " entry" : "") + '" data-i="' + i + '"><span class="no">' + (src.line + i) + "</span>" + (codeState.tab === "agc" ? highlightAGC(ln) : highlightPy(ln)) + "\n</span>";
+    });
+    L.innerHTML = h;
+    L.scrollTop = 0; L.scrollLeft = 0;
+    codeState.lines = L.querySelectorAll(".ln");
+    codeState.exec = exec;
+    codeState.cur = -1;
+    $("code-file").textContent = src.file + " · line " + src.line + (codeState.tab === "agc" ? " · label " + src.label : " · " + src.name + "()");
+  }
+  function updateCode(g, p) {
+    var idx = 0;
+    for (var i = 0; i < D.code.length; i++) if (g >= D.code[i].get_start) idx = i;
+    var step = D.code[idx];
+    if (idx !== codeState.idx) {
+      codeState.idx = idx;
+      $("code-title").textContent = step.title;
+      $("code-comp").textContent = step.computer === "CM" ? "Columbia · Comanche055" : "Eagle · Luminary099";
+      $("code-explain").textContent = step.explain;
+      renderListing();
+    }
+    if (!codeState.exec || !codeState.exec.length) return;
+    var p0 = getToPlay(step.get_start), p1 = getToPlay(step.get_end);
+    var f = p1 > p0 ? Math.max(0, Math.min(0.999, (p - p0) / (p1 - p0))) : 0;
+    var n = codeState.exec.length;
+    // walk the routine a few times over the step's playback window
+    var loops = Math.max(1, Math.round((p1 - p0) / 12));
+    var k = codeState.exec[Math.floor(((f * loops) % 1) * n)];
+    if (k !== codeState.cur) {
+      if (codeState.cur >= 0 && codeState.lines[codeState.cur]) codeState.lines[codeState.cur].classList.remove("cur");
+      codeState.cur = k;
+      var el = codeState.lines[k];
+      if (el) {
+        el.classList.add("cur");
+        var L = $("listing");
+        var top = el.offsetTop - L.offsetTop, h = L.clientHeight;
+        if (top < L.scrollTop + 8 || top > L.scrollTop + h - 40) L.scrollTop = Math.max(0, top - h / 3);
+      }
+    }
+  }
+  function setTab(t) {
+    codeState.tab = t;
+    $("tab-agc").setAttribute("aria-selected", t === "agc");
+    $("tab-py").setAttribute("aria-selected", t === "py");
+    if (codeState.idx >= 0) renderListing();
+    state.dirty = true;
+  }
+  $("tab-agc").addEventListener("click", function () { setTab("agc"); });
+  $("tab-py").addEventListener("click", function () { setTab("py"); });
+
+  // ---------- canvas ----------
+  var canvas = $("scope"), ctx = canvas.getContext("2d");
+  var W = 0, H = 0, DPR = 1;
+  function resize() {
+    var r = $("canvas-wrap").getBoundingClientRect();
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    state.dirty = true;
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe($("canvas-wrap")); else window.addEventListener("resize", resize);
+  resize();
+
+  var view = null, viewScene = null;
+  function smooth(target, scene, dt) {
+    if (!view || viewScene !== scene || reduceMotion) { view = Object.assign({}, target); viewScene = scene; return view; }
+    var a = 1 - Math.exp(-dt * 3.5);
+    for (var k in target) view[k] += (target[k] - view[k]) * a;
+    return view;
+  }
+
+  var STARS = (function () { var s = [], seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; } for (var i = 0; i < 160; i++) s.push([rnd(), rnd(), rnd()]); return s; })();
+  function drawStars() {
+    ctx.fillStyle = C.fg;
+    STARS.forEach(function (s) { ctx.globalAlpha = 0.12 + s[2] * 0.3; ctx.fillRect(s[0] * W, s[1] * H, s[2] > 0.85 ? 1.6 : 1, s[2] > 0.85 ? 1.6 : 1); });
+    ctx.globalAlpha = 1;
+  }
+  function text(t, x, y, opt) {
+    opt = opt || {};
+    ctx.font = (opt.weight || 500) + " " + (opt.size || 12) + "px " + (opt.font || "IBM Plex Sans, Helvetica Neue, Arial, sans-serif");
+    ctx.fillStyle = opt.color || C.muted;
+    ctx.textAlign = opt.align || "left";
+    ctx.textBaseline = opt.base || "alphabetic";
+    ctx.fillText(t, x, y);
+  }
+  function label(t, x, y, color, align) {
+    text(t, x, y, { size: 12, weight: 600, color: color, font: "Barlow Condensed, Arial Narrow, sans-serif", align: align || "left" });
+  }
+  function marker(x, y, color, name, opts) {
+    opts = opts || {};
+    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fillStyle = color; ctx.globalAlpha = 0.18; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = C.bg; ctx.stroke();
+    if (name) label(name.toUpperCase(), x + (opts.dx || 10), y + (opts.dy || -10), color, opts.align);
+  }
+  function plume(x, y, ang, color) { // short flame behind the craft, pointing opposite to the thrust
+    ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
+    ctx.beginPath(); ctx.moveTo(-6, -3.5); ctx.lineTo(-22 - Math.random() * 6, 0); ctx.lineTo(-6, 3.5); ctx.closePath();
+    ctx.fillStyle = color; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1; ctx.restore();
+  }
+  function polyline(xs, ys, X, Y, i0, i1, color, width, dash, alpha) {
+    if (i1 <= i0) return;
+    ctx.beginPath();
+    ctx.moveTo(X(xs[i0]), Y(ys[i0]));
+    for (var i = i0 + 1; i <= i1; i++) ctx.lineTo(X(xs[i]), Y(ys[i]));
+    ctx.strokeStyle = color; ctx.lineWidth = width || 2; ctx.setLineDash(dash || []); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.lineJoin = "round"; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  function niceStep(range, n) {
+    var raw = range / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
+    return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+  }
+  function fmtNum(v, step) { if (Math.abs(v) < step * 1e-6) v = 0; var d = step < 1 ? Math.min(3, Math.ceil(-Math.log10(step))) : 0; return v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+  // Chart frame for profile scenes. Returns mapping functions.
+  function chart(v, xl, yl) {
+    var m = { l: 58, r: 18, t: 52, b: 44 };
+    if (W < 520) { m.l = 48; m.r = 12; }
+    var pw = W - m.l - m.r, ph = H - m.t - m.b;
+    var X = function (x) { return m.l + (x - v.x0) / (v.x1 - v.x0) * pw; };
+    var Y = function (y) { return m.t + ph - (y - v.y0) / (v.y1 - v.y0) * ph; };
+    ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+    var sx = niceStep(v.x1 - v.x0, Math.max(3, Math.floor(pw / 110))), sy = niceStep(v.y1 - v.y0, Math.max(3, Math.floor(ph / 70)));
+    ctx.beginPath();
+    for (var x = Math.ceil(v.x0 / sx) * sx; x <= v.x1 + 1e-9; x += sx) { ctx.moveTo(Math.round(X(x)) + 0.5, m.t); ctx.lineTo(Math.round(X(x)) + 0.5, m.t + ph); }
+    for (var y = Math.ceil(v.y0 / sy) * sy; y <= v.y1 + 1e-9; y += sy) { ctx.moveTo(m.l, Math.round(Y(y)) + 0.5); ctx.lineTo(m.l + pw, Math.round(Y(y)) + 0.5); }
+    ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+    for (x = Math.ceil(v.x0 / sx) * sx; x <= v.x1 + 1e-9; x += sx) text(fmtNum(x, sx), X(x), m.t + ph + 16, { size: 11, align: "center", font: "IBM Plex Mono, monospace", weight: 400 });
+    for (y = Math.ceil(v.y0 / sy) * sy; y <= v.y1 + 1e-9; y += sy) text(fmtNum(y, sy), m.l - 6, Y(y) + 4, { size: 11, align: "right", font: "IBM Plex Mono, monospace", weight: 400 });
+    text(xl, m.l + pw / 2, H - 10, { size: 12, align: "center" });
+    ctx.save(); ctx.translate(14, m.t + ph / 2); ctx.rotate(-Math.PI / 2); text(yl, 0, 0, { size: 12, align: "center", base: "middle" }); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(m.l, m.t, pw, ph); ctx.clip();
+    return { X: X, Y: Y, m: m, pw: pw, ph: ph, done: function () { ctx.restore(); } };
+  }
+  function readout(rows) { // top-right block of key numbers
+    var x = W - 14, y = 22;
+    ctx.font = "500 13px IBM Plex Mono, monospace";
+    var vw = 0;
+    rows.forEach(function (r) { vw = Math.max(vw, ctx.measureText(r[1]).width); });
+    rows.forEach(function (r) {
+      text(r[0].toUpperCase(), x - vw - 12, y, { size: 11, weight: 600, font: "Barlow Condensed, Arial Narrow, sans-serif", color: C.muted, align: "right" });
+      text(r[1], x, y, { size: 13, weight: 500, font: "IBM Plex Mono, monospace", color: r[2] || C.fg, align: "right" });
+      y += 18;
+    });
+  }
+  function note(t) {
+    if (!t) return;
+    ctx.font = "400 11px IBM Plex Sans, Helvetica Neue, Arial, sans-serif";
+    var words = t.split(" "), line = "", lines = [], maxW = Math.min(W - 28, 560, Math.max(150, W - 200));
+    words.forEach(function (w) { var test = line ? line + " " + w : w; if (ctx.measureText(test).width > maxW) { lines.push(line); line = w; } else line = test; });
+    if (line) lines.push(line);
+    lines.slice(-3).forEach(function (l, i, a) { text(l, 14, 20 + i * 14, { size: 11, weight: 400, color: C.faint }); });
+  }
+  function scaleBar(kmPerPx) {
+    var target = 110 * kmPerPx, p = Math.pow(10, Math.floor(Math.log10(target))), r = target / p;
+    var km = (r < 2 ? 1 : r < 5 ? 2 : 5) * p, px = km / kmPerPx;
+    var x = 14, y = H - 16;
+    ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y); ctx.lineTo(x + px, y); ctx.lineTo(x + px, y - 4); ctx.stroke();
+    text(km.toLocaleString("en-US") + " km", x + px + 8, y + 1, { size: 11, font: "IBM Plex Mono, monospace", weight: 400 });
+  }
+  function body(x, y, rpx, color, name) {
+    rpx = Math.max(rpx, 2.5);
+    var g = ctx.createRadialGradient(x - rpx * 0.35, y - rpx * 0.35, rpx * 0.1, x, y, rpx);
+    g.addColorStop(0, color); g.addColorStop(1, shade(color, 0.45));
+    ctx.beginPath(); ctx.arc(x, y, rpx, 0, Math.PI * 2); ctx.fillStyle = g; ctx.fill();
+    if (name) label(name.toUpperCase(), x, y + rpx + 16, C.muted, "center");
+  }
+  function shade(hex, k) {
+    var n = parseInt(hex.slice(1), 16);
+    return "rgb(" + Math.round(((n >> 16) & 255) * k) + "," + Math.round(((n >> 8) & 255) * k) + "," + Math.round((n & 255) * k) + ")";
+  }
+  function burnActive(burns, g) { for (var i = 0; i < burns.length; i++) if (g >= burns[i].get0 && g <= burns[i].get1) return burns[i]; return null; }
+
+  // --- map transform (centre + span in km) ---
+  function mapXf(v) {
+    var s = Math.min(W, H) / v.span;
+    return { X: function (x) { return W / 2 + (x - v.cx) * s; }, Y: function (y) { return H / 2 - (y - v.cy) * s; }, s: s };
+  }
+
+  var SCENES = {};
+  var T = D.tracks;
+
+  SCENES.launch = function (g, dt) {
+    var tr = T.launch;
+    var v = smooth({ x0: -40, x1: 2800, y0: 0, y1: 200 }, "launch", dt);
+    var c = chart(v, tr.x_label, tr.y_label);
+    var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y], ["v", tr.v]], g);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.csm, 1, [4, 5], 0.35);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.csm, 2.2);
+    var px = c.X(s.x), py = c.Y(s.y);
+    if (g < tr.get[tr.get.length - 1]) plume(px, py, Math.atan2(c.Y(tr.y[Math.min(s.i + 1, tr.y.length - 1)]) - py, c.X(tr.x[Math.min(s.i + 1, tr.x.length - 1)]) - px), C.amber);
+    marker(px, py, C.csm, g < 709 ? "Saturn V" : "Columbia + S-IVB");
+    c.done();
+    note(tr.note + " Vertical scale exaggerated about 14 times.");
+    readout([["Altitude", s.y.toFixed(1) + " km"], ["Inertial speed", Math.round(s.v).toLocaleString("en-US") + " m/s"], ["Downrange", Math.round(s.x).toLocaleString("en-US") + " km"]]);
+  };
+
+  SCENES["earth-orbit"] = function (g, dt) {
+    var tr = T["earth-orbit"];
+    var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], g);
+    var r = Math.hypot(s.x, s.y);
+    var v = smooth({ cx: 0, cy: 0, span: Math.max(17000, r * 2.6) }, "earth-orbit", dt);
+    var M = mapXf(v);
+    drawStars();
+    body(M.X(0), M.Y(0), 6378 * M.s, C.earth, "Earth");
+    polyline(tr.x, tr.y, M.X, M.Y, 0, s.i, C.csm, 2);
+    var b = burnActive(tr.burns, g);
+    var px = M.X(s.x), py = M.Y(s.y);
+    if (b) { var j = Math.min(s.i + 1, tr.x.length - 1); plume(px, py, Math.atan2(M.Y(tr.y[j]) - py, M.X(tr.x[j]) - px), C.amber); }
+    marker(px, py, C.csm, g < EV["docking-lm"].get ? "Columbia + S-IVB" : "Columbia + Eagle");
+    note(tr.note);
+    scaleBar(1 / M.s);
+    readout([["Altitude", Math.round(r - 6378).toLocaleString("en-US") + " km"], ["Orbit", g < EV.tli.get ? "185 km parking orbit" : g < 10203 ? "TLI burn" : "Leaving Earth"], ["Docked", g >= EV["docking-lm"].get ? "Eagle extracted soon" : "No"]].slice(0, 2));
+  };
+
+  SCENES.cislunar = function (g, dt) {
+    var tr = T.cislunar;
+    var out = tr.legs[0], ret = tr.legs[1];
+    var leg = g < ret.get[0] ? out : ret;
+    var s = sampleTrack(leg.get, [["x", leg.x], ["y", leg.y]], g);
+    var dm = Math.hypot(s.x - tr.moon[0], s.y), de = Math.hypot(s.x, s.y);
+    var tgt = { cx: 192000, cy: 0, span: 470000 * Math.max(1, (H / W) * 0.95) };
+    if (W < H) tgt.span = 430000;
+    if (dm < 70000) tgt = { cx: tr.moon[0] - 8000, cy: 0, span: 150000 };
+    else if (de < 60000) tgt = { cx: 0, cy: 0, span: 140000 };
+    var v = smooth(tgt, "cislunar", dt);
+    var M = mapXf(v);
+    drawStars();
+    body(M.X(0), M.Y(0), tr.r_earth * M.s, C.earth, "Earth");
+    body(M.X(tr.moon[0]), M.Y(0), tr.r_moon * M.s, C.moon, "Moon");
+    if (leg === out) {
+      polyline(out.x, out.y, M.X, M.Y, s.i, out.x.length - 1, C.csm, 1, [4, 6], 0.4);
+      polyline(out.x, out.y, M.X, M.Y, 0, s.i, C.csm, 2);
+    } else {
+      polyline(out.x, out.y, M.X, M.Y, 0, out.x.length - 1, C.csm, 1, null, 0.25);
+      polyline(ret.x, ret.y, M.X, M.Y, s.i, ret.x.length - 1, C.csm, 1, [4, 6], 0.4);
+      polyline(ret.x, ret.y, M.X, M.Y, 0, s.i, C.csm, 2);
+    }
+    var px = M.X(s.x), py = M.Y(s.y);
+    if (Math.abs(g - EV["mcc-2"].get) < 5 || Math.abs(g - EV["mcc-5"].get) < 12) plume(px, py, 0, C.amber);
+    marker(px, py, C.csm, leg === out ? "Columbia + Eagle" : "Columbia");
+    note(tr.note);
+    scaleBar(1 / M.s);
+    readout([["From Earth", Math.round(de).toLocaleString("en-US") + " km"], ["From Moon", Math.round(dm).toLocaleString("en-US") + " km"]]);
+  };
+
+  function segPos(seg, g) {
+    if (seg.kind === "arc") { var s = sampleTrack(seg.get, [["x", seg.x], ["y", seg.y]], g); return [s.x, s.y, s.i]; }
+    if (seg.kind === "periodic") {
+      var n = seg.x.length, k = ((g - seg.epoch) / seg.period) % 1; if (k < 0) k += 1;
+      var fi = k * n, i = Math.floor(fi) % n, j = (i + 1) % n, f = fi - Math.floor(fi);
+      return [seg.x[i] + (seg.x[j] - seg.x[i]) * f, seg.y[i] + (seg.y[j] - seg.y[i]) * f, i];
+    }
+    if (seg.kind === "surface") return [seg.x, seg.y, 0];
+    return null;
+  }
+  function findSeg(list, g) {
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i], a = s.get ? s.get[0] : s.get_start, b = s.get ? s.get[s.get.length - 1] : s.get_end;
+      if (g >= a && g < b) return s;
+    }
+    return null;
+  }
+  SCENES["lunar-orbit"] = function (g, dt) {
+    var tr = T["lunar-orbit"];
+    var cs = findSeg(tr.csm, g) || tr.csm[tr.csm.length - 1];
+    var cp = segPos(cs, g);
+    var rr = Math.hypot(cp[0], cp[1]);
+    var v = smooth({ cx: 0, cy: 0, span: Math.max(4700, rr * 2.5) }, "lunar-orbit", dt);
+    var M = mapXf(v);
+    drawStars();
+    body(M.X(0), M.Y(0), tr.r_moon * M.s, C.moon, "");
+    label("MOON", M.X(0), M.Y(0) + 4, C.bg, "center");
+    // orbit traces
+    if (cs.kind === "periodic") polyline(cs.x.concat([cs.x[0]]), cs.y.concat([cs.y[0]]), M.X, M.Y, 0, cs.x.length, C.csm, 1.2, null, 0.45);
+    if (cs.kind === "arc") {
+      tr.csm.forEach(function (s2) { if (s2.kind === "arc" && s2.get[0] <= cs.get[0]) polyline(s2.x, s2.y, M.X, M.Y, 0, s2 === cs ? cp[2] : s2.x.length - 1, C.csm, 2); });
+      if (cs.burn === "tei" || cs.burn === "loi-1") polyline(cs.x, cs.y, M.X, M.Y, cp[2], cs.x.length - 1, C.csm, 1, [4, 6], 0.35);
+    }
+    // LM
+    var ls = findSeg(tr.lm, g), lp = null, lmLabel = null;
+    if (ls) {
+      if (ls.kind === "follow") lp = cp.slice();
+      else lp = segPos(ls, g);
+      if (ls.kind === "periodic") polyline(ls.x.concat([ls.x[0]]), ls.y.concat([ls.y[0]]), M.X, M.Y, 0, ls.x.length, C.lm, 1.2, null, 0.5);
+    }
+    var docked = (g < EV.undocking.get) || (g >= EV.docking.get && g < EV["lm-jettison"].get);
+    // landing site
+    var site = tr.site;
+    ctx.beginPath(); ctx.arc(M.X(site.x), M.Y(site.y), 3, 0, Math.PI * 2); ctx.fillStyle = C.amber; ctx.fill();
+    label("TRANQUILITY BASE", M.X(site.x) + (site.x < 0 ? -8 : 8), M.Y(site.y) + (site.y < 0 ? 14 : -8), C.amber, site.x < 0 ? "right" : "left");
+    var b = burnActive(tr.burns, g);
+    var px = M.X(cp[0]), py = M.Y(cp[1]);
+    if (b && b.id !== "doi") {
+      var ahead = segPos(cs, g + 20);
+      var ang = Math.atan2(M.Y(ahead[1]) - py, M.X(ahead[0]) - px);
+      plume(px, py, b.id === "tei" ? ang : ang + Math.PI, C.amber);
+    }
+    if (lp && !docked) {
+      var lx = M.X(lp[0]), ly = M.Y(lp[1]);
+      if (ls.kind === "follow") { lx += 7; ly += 7; }
+      if (b && b.id === "doi") plume(lx, ly, Math.atan2(ly - M.Y(0), lx - M.X(0)) + Math.PI / 2, C.amber);
+      marker(lx, ly, C.lm, ls.kind === "surface" ? "" : "Eagle", { dy: 18 });
+      marker(px, py, C.csm, "Columbia");
+    } else {
+      marker(px, py, C.csm, docked && lmLabelOK(g) ? "Columbia + Eagle" : "Columbia");
+    }
+    note(tr.note);
+    scaleBar(1 / M.s);
+    var alt = rr - tr.r_moon;
+    var rows = [["Columbia alt.", Math.round(alt).toLocaleString("en-US") + " km"]];
+    if (lp && !docked && ls.kind !== "follow") rows.push(["Eagle alt.", ls.kind === "surface" ? "on the surface" : Math.round(Math.hypot(lp[0], lp[1]) - tr.r_moon) + " km", C.lm]);
+    if (b) rows.push(["Burn", b.id.toUpperCase(), C.amber]);
+    readout(rows);
+  };
+  function lmLabelOK(g) { return g < EV["lm-jettison"].get; }
+
+  var PHC = { 63: "p63", 64: "p64", 66: "p66" };
+  SCENES.descent = function (g, dt) {
+    var tr = T.descent;
+    var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y], ["p", tr.pitch_deg], ["th", tr.throttle], ["vv", tr.v_vert]], g);
+    s.th /= 100; // throttle is stored in percent
+    var tgt = s.y > 2.6 ? { x0: -460, x1: 12, y0: 0, y1: 16 } : s.y > 0.25 ? { x0: -9, x1: 0.6, y0: 0, y1: 2.4 } : { x0: -1.6, x1: 0.15, y0: 0, y1: 0.26 };
+    var v = smooth(tgt, "descent", dt);
+    var c = chart(v, tr.x_label, tr.y_label);
+    // ground and site
+    ctx.fillStyle = C["panel-2"]; ctx.fillRect(c.m.l, c.Y(0), c.pw, 4000);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.lm, 1, [4, 5], 0.3);
+    var start = 0;
+    for (var i = 1; i <= s.i; i++) {
+      if (tr.phase[i] !== tr.phase[start] || i === s.i) { polyline(tr.x, tr.y, c.X, c.Y, start, i, C[PHC[tr.phase[start]]], 2.4); start = i; }
+    }
+    // events on the path
+    [["alarm-1202", "1202", C.alarm], ["p64", "P64", C.p64], ["alarm-1201", "1201", C.alarm], ["p66", "P66", C.p66]].forEach(function (e) {
+      var eg = EV[e[0]].get; if (g < eg) return;
+      var q = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], eg);
+      var ex = c.X(q.x), ey = c.Y(q.y);
+      ctx.beginPath(); ctx.arc(ex, ey, 3.5, 0, Math.PI * 2); ctx.fillStyle = e[2]; ctx.fill();
+      label(e[1], ex - 7, ey + 15, e[2], "right");
+    });
+    ctx.beginPath(); ctx.moveTo(c.X(0), c.Y(0)); ctx.lineTo(c.X(0), c.Y(0) - 18); ctx.strokeStyle = C.amber; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = C.amber; ctx.fillRect(c.X(0), c.Y(0) - 18, 9, 6);
+    var px = c.X(s.x), py = c.Y(s.y);
+    // LM attitude glyph: thrust axis tilted by pitch from vertical
+    var landed = g >= EV.touchdown.get;
+    var ang = (landed ? 0 : s.p) * Math.PI / 180;
+    ctx.save(); ctx.translate(px, py); ctx.rotate(-ang);
+    if (!landed && g >= EV.pdi.get) {
+      ctx.beginPath(); ctx.moveTo(-3, 7); ctx.lineTo(0, 9 + 18 * s.th + Math.random() * 3); ctx.lineTo(3, 7); ctx.closePath(); ctx.fillStyle = C.amber; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = C.lm; ctx.fillRect(-5, -7, 10, 9);
+    ctx.strokeStyle = C.lm; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-5, 2); ctx.lineTo(-9, 8); ctx.moveTo(5, 2); ctx.lineTo(9, 8); ctx.stroke();
+    ctx.restore();
+    label("EAGLE", px + 14, py - 10, C.lm);
+    c.done();
+    note(tr.note + " The view zooms in as Eagle gets lower.");
+    var ph = tr.phase[Math.min(s.i + (s.f > 0.5 ? 1 : 0), tr.phase.length - 1)];
+    readout([["Program", landed ? "P68" : "P" + ph, C[PHC[ph]]], ["Altitude", s.y >= 1 ? s.y.toFixed(2) + " km" : Math.round(s.y * 1000) + " m"], ["Sink rate", (landed ? 0 : -s.vv).toFixed(1) + " m/s"], ["Throttle", landed ? "off" : Math.round(s.th * 100) + " %"], ["To site", Math.abs(s.x) >= 1 ? Math.abs(s.x).toFixed(1) + " km" : Math.round(Math.abs(s.x) * 1000) + " m"]]);
+  };
+
+  SCENES.surface = function (g, dt) {
+    var tr = T.surface;
+    // sky + Earth
+    drawStars();
+    var gy = H * 0.68;
+    ctx.beginPath(); ctx.arc(W * 0.78, H * 0.2, Math.min(W, H) * 0.045, 0, Math.PI * 2); ctx.fillStyle = C.earth; ctx.fill();
+    ctx.beginPath(); ctx.arc(W * 0.78 + Math.min(W, H) * 0.02, H * 0.2 - 2, Math.min(W, H) * 0.045, 0, Math.PI * 2); ctx.fillStyle = C.panel; ctx.fill();
+    label("EARTH", W * 0.78, H * 0.2 + Math.min(W, H) * 0.045 + 16, C.muted, "center");
+    // ground
+    ctx.fillStyle = shade(C.moon, 0.42); ctx.fillRect(0, gy, W, H - gy);
+    ctx.fillStyle = shade(C.moon, 0.55);
+    for (var i = 0; i < 18; i++) { var cx = (i * 97.3 % 1) * W, cy = gy + 12 + (i * 53.7 % 1) * (H - gy - 20), rw = 8 + (i * 31 % 24); ctx.beginPath(); ctx.ellipse(cx, cy, rw, rw * 0.25, 0, 0, Math.PI * 2); ctx.fill(); }
+    // LM
+    var lx = W * 0.42, s = Math.min(W, H) / 380;
+    ctx.save(); ctx.translate(lx, gy); ctx.scale(s, s);
+    ctx.strokeStyle = shade(C.lm, 0.8); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-28, -30); ctx.lineTo(-46, 0); ctx.moveTo(28, -30); ctx.lineTo(46, 0); ctx.stroke();
+    ctx.fillStyle = shade(C.lm, 0.8); ctx.fillRect(-52, -2, 12, 3); ctx.fillRect(40, -2, 12, 3);
+    ctx.fillStyle = C.lm; ctx.fillRect(-30, -44, 60, 20);
+    ctx.fillStyle = shade(C.moon, 0.85);
+    var up = g >= EV.liftoff.get;
+    if (!up) { ctx.beginPath(); ctx.moveTo(-22, -44); ctx.lineTo(-26, -70); ctx.lineTo(0, -82); ctx.lineTo(26, -70); ctx.lineTo(22, -44); ctx.closePath(); ctx.fill(); ctx.fillStyle = C.bg; ctx.fillRect(-12, -72, 9, 8); ctx.fillRect(3, -72, 9, 8); }
+    ctx.restore();
+    var eva = g >= EV["eva-start"].get && g < EV["eva-end"].get;
+    if (eva) {
+      [[lx + 70 * s, 1], [lx + 120 * s, 0]].forEach(function (a, k) {
+        if (k === 1 && g < EV["first-step"].get + 1200) return;
+        ctx.fillStyle = C.fg; ctx.beginPath(); ctx.arc(a[0], gy - 26 * s, 4.5 * s, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(a[0] - 4 * s, gy - 22 * s, 8 * s, 14 * s); ctx.fillRect(a[0] - 3 * s, gy - 8 * s, 2.5 * s, 8 * s); ctx.fillRect(a[0] + 0.5 * s, gy - 8 * s, 2.5 * s, 8 * s);
+      });
+    }
+    if (g >= 395520 && !up) { // flag planted ~109:52 GET; blown over at liftoff
+      ctx.fillStyle = C.fg; ctx.fillRect(lx + 160 * s, gy - 52 * s, 1.5 * s, 52 * s); ctx.fillStyle = C.alarm; ctx.globalAlpha = 0.8; ctx.fillRect(lx + 161.5 * s, gy - 52 * s, 20 * s, 12 * s); ctx.globalAlpha = 1;
+    }
+    var on = g - EV.touchdown.get;
+    text("TRANQUILITY BASE", 14, 26, { font: "Barlow Condensed, Arial Narrow, sans-serif", size: 22, weight: 700, color: C.fg });
+    text(tr.lat_deg.toFixed(3) + "° N, " + tr.lon_deg.toFixed(3) + "° E · Sea of Tranquility", 14, 46, { size: 12 });
+    readout([["On the surface", Math.floor(on / 3600) + " h " + pad(Math.floor(on / 60) % 60, 2) + " m"], ["Moonwalk", eva ? "in progress" : g < EV["eva-start"].get ? "not yet" : "done (2 h 31 m)", eva ? C.amber : C.fg]]);
+  };
+
+  SCENES.ascent = function (g, dt) {
+    var tr = T.ascent;
+    var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y], ["p", tr.pitch_deg]], g);
+    var v = smooth({ x0: -8, x1: 310, y0: 0, y1: 22 }, "ascent", dt);
+    var c = chart(v, tr.x_label, tr.y_label);
+    ctx.fillStyle = C["panel-2"]; ctx.fillRect(c.m.l, c.Y(0), c.pw, 4000);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.lm, 1, [4, 5], 0.35);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.lm, 2.2);
+    var px = c.X(s.x), py = c.Y(s.y);
+    var burning = g >= tr.get[0] && g < tr.get[tr.get.length - 1];
+    if (burning) { var j = Math.min(s.i + 1, tr.x.length - 1); plume(px, py, Math.atan2(c.Y(tr.y[j]) - py, c.X(tr.x[j]) - px), C.amber); }
+    marker(px, py, C.lm, "Eagle");
+    c.done();
+    note(tr.note + " Insertion orbit about " + Math.round(tr.perilune_km) + " x " + Math.round(tr.apolune_km) + " km. Vertical scale exaggerated.");
+    readout([["Altitude", s.y.toFixed(2) + " km"], ["Pitch", Math.round(s.p) + "°"], ["Engine", burning ? "ascent engine on" : "cut off"]]);
+  };
+
+  SCENES.rendezvous = function (g, dt) {
+    var tr = T.rendezvous;
+    var s = sampleTrack(tr.get, [["x", tr.x], ["z", tr.z]], g);
+    var tgt = g < EV.tpi.get - 600 ? { x0: -350, x1: 20, y0: -100, y1: 12 } : { x0: -70, x1: 6, y0: -34, y1: 6 };
+    var v = smooth(tgt, "rendezvous", dt);
+    var c = chart(v, tr.x_label, tr.y_label);
+    polyline(tr.x, tr.z, c.X, c.Y, 0, tr.x.length - 1, C.lm, 1, [4, 5], 0.3);
+    polyline(tr.x, tr.z, c.X, c.Y, 0, s.i, C.lm, 2.2);
+    tr.burns.forEach(function (b) {
+      if (g < b.get) return;
+      var q = sampleTrack(tr.get, [["x", tr.x], ["z", tr.z]], b.get);
+      ctx.beginPath(); ctx.arc(c.X(q.x), c.Y(q.z), 3.5, 0, Math.PI * 2); ctx.fillStyle = C.amber; ctx.fill();
+      label(b.id.toUpperCase() + " " + b.dv_ms.toFixed(1) + " m/s", c.X(q.x) - 6, c.Y(q.z) - 10, C.amber, "right");
+    });
+    marker(c.X(0), c.Y(0), C.csm, "Columbia", { dy: -12 });
+    var docked = g >= EV.docking.get;
+    if (!docked) marker(c.X(s.x), c.Y(s.z), C.lm, "Eagle", { dy: 18 });
+    c.done();
+    note(tr.note);
+    var rng = Math.hypot(s.x, s.z);
+    readout([["Range", docked ? "docked" : rng >= 1 ? rng.toFixed(1) + " km" : Math.round(rng * 1000) + " m"], ["Below Columbia", (-s.z).toFixed(1) + " km"]]);
+  };
+
+  SCENES.entry = function (g, dt) {
+    var tr = T.entry;
+    var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y], ["g", tr.g]], g);
+    var tgt = g < tr.sim_end ? { x0: -40, x1: 2400, y0: 0, y1: 130 } : { x0: 2200, x1: 2360, y0: 0, y1: 12 };
+    if (g < EV["entry-interface"].get) tgt = { x0: -40, x1: 2400, y0: 0, y1: 130 };
+    var v = smooth(tgt, "entry", dt);
+    var c = chart(v, tr.x_label, tr.y_label);
+    ctx.fillStyle = C["panel-2"]; ctx.fillRect(c.m.l, c.Y(0), c.pw, 4000);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.csm, 1, [4, 5], 0.3);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.csm, 2.2);
+    tr.transitions.forEach(function (t) {
+      if (g < t.get) return;
+      var q = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], t.get);
+      ctx.beginPath(); ctx.arc(c.X(q.x), c.Y(q.y), 3, 0, Math.PI * 2); ctx.fillStyle = C.amber; ctx.fill();
+      label(t.program, c.X(q.x) + 5, c.Y(q.y) - 7, C.amber);
+    });
+    ctx.fillStyle = C.amber; ctx.fillRect(c.X(tr.target_km) - 1, c.Y(0) - 14, 2, 14);
+    label("TARGET", c.X(tr.target_km), c.Y(0) - 18, C.amber, "center");
+    var pre = g < EV["entry-interface"].get;
+    if (!pre) marker(c.X(s.x), c.Y(s.y), C.csm, g >= EV.splashdown.get ? "Splashdown" : "Columbia");
+    c.done();
+    note(tr.note);
+    var prog = "P63"; tr.transitions.forEach(function (t) { if (g >= t.get) prog = t.program; });
+    if (pre) {
+      text("CM/SM separated. Entry interface (400,000 ft) in " + Math.max(0, Math.round(EV["entry-interface"].get - g)) + " s", W / 2, H / 2, { align: "center", size: 13, color: C.fg });
+      readout([["Speed", "11.0 km/s"]]);
+    } else {
+      readout([["Program", g >= tr.steeroff.get ? "steering off" : prog, C.amber], ["Altitude", s.y.toFixed(1) + " km"], ["Load", s.g.toFixed(2) + " g", s.g > 5 ? C.alarm : C.fg], ["Range flown", Math.round(s.x).toLocaleString("en-US") + " km"]]);
+    }
+  };
+
+  var SCENE_TITLE = { launch: "Launch and climb", "earth-orbit": "Earth orbit", cislunar: "Earth–Moon space", "lunar-orbit": "Lunar orbit", descent: "Powered descent", surface: "On the surface", ascent: "Ascent from the Moon", rendezvous: "Rendezvous", entry: "Entry" };
+  var SCENE_FRAME = {};
+  for (var sk in T) SCENE_FRAME[sk] = T[sk].frame || "Tranquility Base";
+
+  // ---------- transport UI ----------
+  var bands = $("bands"), ticks = $("ticks");
+  D.phases.forEach(function (p, i) {
+    var a = getToPlay(p.get_start), b = getToPlay(p.get_end);
+    var d = document.createElement("div");
+    d.className = p.active_computer === "LM" ? "lm" : "cm";
+    d.style.width = ((b - a) / TOTAL * 100) + "%";
+    d.title = p.name;
+    bands.appendChild(d);
+  });
+  var MAJOR = { launch: 1, tli: 1, "loi-1": 1, pdi: 1, touchdown: 1, liftoff: 1, docking: 1, tei: 1, splashdown: 1 };
+  EVENTS.forEach(function (e) {
+    var x = getToPlay(e.get) / TOTAL * 100;
+    var t = document.createElement("i"); t.style.left = x + "%"; if (MAJOR[e.id]) t.className = "major"; ticks.appendChild(t);
+    if (MAJOR[e.id]) { var s = document.createElement("span"); s.textContent = e.short; s.style.left = Math.min(97, Math.max(2, x)) + "%"; ticks.appendChild(s); }
+  });
+  var jump = $("jump");
+  jump.innerHTML = '<option value="">Jump to event…</option>' + EVENTS.map(function (e) { return '<option value="' + e.id + '">' + fmtGET(e.get) + "  " + esc(e.label) + "</option>"; }).join("");
+  jump.addEventListener("change", function () { if (jump.value) { seekEvent(jump.value, true); jump.value = ""; } });
+  var scrub = $("scrub");
+  scrub.max = TOTAL;
+  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); state.dirty = true; });
+
+  function setPlaying(p) {
+    state.playing = p && state.play < TOTAL;
+    $("play-text").textContent = state.playing ? "Pause" : "Play";
+    $("play").setAttribute("aria-label", state.playing ? "Pause" : "Play");
+    $("play-icon").innerHTML = state.playing ? '<path d="M3 2h4v12H3zM9 2h4v12H9z"/>' : '<path d="M4 2l10 6-10 6z"/>';
+  }
+  $("play").addEventListener("click", function () { if (state.play >= TOTAL) state.play = 0; setPlaying(!state.playing); });
+  function seekEvent(id, keepPlaying) {
+    var e = EV[id]; if (!e) return;
+    state.play = Math.min(TOTAL, getToPlay(e.get) + 0.002);
+    state.lastEvent = e; state.dirty = true;
+    showToast(e);
+    if (!keepPlaying) setPlaying(false);
+  }
+  function stepEvent(dir) {
+    var g = playToGet(state.play), list = EVENTS;
+    var target = null;
+    if (dir > 0) { for (var i = 0; i < list.length; i++) if (list[i].get > g + 1) { target = list[i]; break; } }
+    else { for (i = list.length - 1; i >= 0; i--) if (list[i].get < g - 1) { target = list[i]; break; } }
+    if (target) seekEvent(target.id, state.playing);
+  }
+  $("prev").addEventListener("click", function () { stepEvent(-1); });
+  $("next").addEventListener("click", function () { stepEvent(1); });
+  Array.prototype.forEach.call(document.querySelectorAll(".speed button"), function (b) {
+    b.addEventListener("click", function () {
+      state.speed = parseFloat(b.getAttribute("data-s"));
+      Array.prototype.forEach.call(document.querySelectorAll(".speed button"), function (o) { o.setAttribute("aria-pressed", o === b); });
+    });
+  });
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target && e.target.tagName) || "";
+    if (tag === "SELECT" || tag === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
+    if (e.key === " " && tag !== "INPUT") { e.preventDefault(); if (state.play >= TOTAL) state.play = 0; setPlaying(!state.playing); }
+    else if (e.key === "ArrowRight" && tag !== "INPUT") { e.preventDefault(); stepEvent(1); }
+    else if (e.key === "ArrowLeft" && tag !== "INPUT") { e.preventDefault(); stepEvent(-1); }
+  });
+  function showDsky(c) {
+    $("dskys").setAttribute("data-show", c);
+    $("show-cm").setAttribute("aria-selected", c === "CM"); $("show-lm").setAttribute("aria-selected", c === "LM");
+    state.userDsky = c;
+  }
+  $("show-cm").addEventListener("click", function () { showDsky("CM"); });
+  $("show-lm").addEventListener("click", function () { showDsky("LM"); });
+
+  var toastTimer = null;
+  function showToast(e) {
+    var t = $("toast");
+    t.innerHTML = "<b>" + esc(e.short) + '</b><span class="t">' + fmtGET(e.get) + "</span><span>" + esc(e.detail) + "</span>";
+    t.classList.add("new");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 3500);
+  }
+  function hideToast() { $("toast").classList.remove("new"); }
+
+  function fromHash() {
+    var h = (location.hash || "").slice(1);
+    if (h && EV[h]) { seekEvent(h, false); return true; }
+    return false;
+  }
+  window.addEventListener("hashchange", fromHash);
+
+  // ---------- frame ----------
+  var last = performance.now(), lastSecond = -1, lastPhase = -1, lastScene = null, autoDsky = null;
+  function frame(now) {
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (state.playing) {
+      state.play += dt * state.speed;
+      if (state.play >= TOTAL) { state.play = TOTAL; setPlaying(false); }
+      state.dirty = true;
+    }
+    var g = playToGet(state.play);
+    var pi = phaseAt(g), ph = D.phases[pi];
+    // events crossed while playing
+    var ev = lastEvent(g);
+    if (ev && ev !== state.lastEvent) { showToast(ev); if (!state.playing) hideToast(); state.lastEvent = ev; }
+    if (Math.floor(g) !== lastSecond || pi !== lastPhase) {
+      lastSecond = Math.floor(g);
+      $("get").textContent = fmtGET(g);
+      $("utc").textContent = fmtUTC(g);
+      $("ptime").textContent = fmtPlay(state.play) + " / " + fmtPlay(TOTAL);
+    }
+    if (pi !== lastPhase) {
+      lastPhase = pi;
+      $("phase").textContent = ph.name;
+      $("phase-step").textContent = "Phase " + (pi + 1) + " of " + D.phases.length;
+      Array.prototype.forEach.call(bands.children, function (b, i) { b.classList.toggle("cur", i === pi); });
+    }
+    $("event").innerHTML = ev ? "<b>" + esc(ev.short) + "</b> " + fmtGET(ev.get) + " · " + esc(ev.label) : "";
+    var codeComp = D.code.filter(function (c) { return g >= c.get_start && g < c.get_end; })[0];
+    var active = codeComp ? codeComp.computer : ph.active_computer;
+    if (active !== autoDsky) { autoDsky = active; if (window.innerWidth <= 700) showDsky(active); }
+    var blinkOn = Math.floor(now / 380) % 2 === 0;
+    updateDsky("CM", g, active, blinkOn);
+    updateDsky("LM", g, active, blinkOn);
+    updateCode(g, state.play);
+    var pct = state.play / TOTAL * 100;
+    $("progress").style.left = "calc(" + pct + "% - 1px)";
+    if (document.activeElement !== scrub) scrub.value = state.play;
+    if (state.dirty || state.playing || (view && viewScene === ph.scene && Math.abs(dt) > 0)) {
+      if (ph.scene !== lastScene) { lastScene = ph.scene; $("scene-title").textContent = SCENE_TITLE[ph.scene]; $("scene-frame").textContent = SCENE_FRAME[ph.scene]; }
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = C.panel; ctx.fillRect(0, 0, W, H);
+      try { SCENES[ph.scene](g, dt); } catch (err) { text("Drawing error: " + err.message, 14, 20, { color: C.alarm }); if (window.console) console.error(err); }
+      state.dirty = false;
+    }
+    requestAnimationFrame(frame);
+  }
+  var hashed = fromHash();
+  if (!hashed) { state.play = 0; state.lastEvent = EV.launch; showToast(EV.launch); }
+  setPlaying(!hashed && !reduceMotion);
+  if (window.innerWidth <= 700) showDsky("CM");
+  requestAnimationFrame(frame);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { state.dirty = true; });
+})();
+</script>
