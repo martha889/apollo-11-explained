@@ -33,7 +33,7 @@ python explained/mission.py --only lm_02    # Run a single phase by short ID, mo
 
 - **Trajectory**: the spacecraft's path, with a view that changes with each phase (Earth orbit, the Earth–Moon figure-8, lunar orbit, the descent profile, rendezvous, entry).
 - **Guidance computers**: Columbia's and Eagle's DSKYs as the crew saw them. They show the program, verb, noun, registers and warning lights, including the 1202/1201 alarms.
-- **Voice loop**: what the crew and Mission Control said at that moment, verbatim and timed to the GET, from NASA's transcripts as published in the [Apollo Flight Journal](https://apollojournals.org/afj/) and [Apollo Lunar Surface Journal](https://apollojournals.org/alsj/) (lines and sources in [`live/transcript.json`](live/transcript.json)).
+- **Voice loop**: what the crew and Mission Control said at that moment, with the real recordings (30 clips of NASA's air-to-ground audio; the clock waits while someone speaks, and the Sound button turns it off), verbatim and timed to the GET, from NASA's transcripts as published in the [Apollo Flight Journal](https://apollojournals.org/afj/) and [Apollo Lunar Surface Journal](https://apollojournals.org/alsj/) (lines and sources in [`live/transcript.json`](live/transcript.json); each clip's source file and time window in [`live/audio/clips.json`](live/audio/clips.json), cut by [`live/tools/cut_audio.py`](live/tools/cut_audio.py)).
 - **Code**: the AGC source that was running at that moment, quoted line for line from `Comanche055/` and `Luminary099/`, next to its Python translation from this folder.
 
 ```bash
@@ -42,6 +42,8 @@ open explained/live/apollo11_live.html  # any browser; works offline from file:/
 ```
 
 Controls: Space to play or pause, the Left/Right arrows to jump between events, and a speed selector (the full mission plays in about 6.5 minutes at 1×). You can also link to an event directly with a hash such as `apollo11_live.html#pdi`, `#alarm-1202`, `#touchdown` or `#entry-interface`. Every DSKY caption says whether its numbers come from a simulation or show only the program the crew would have had up. Notes in the trajectory panel say where a simulation was retimed onto the real ground elapsed time.
+
+Both DSKYs are interactive: pause playback and press any key to enter crew mode and key verbs and nouns as the crew did. Try `V35 ENTR` for a lamp test, `V16 N36 ENTR` to watch the AGC mission clock tick, `V05 N09 ENTR` to inspect alarm codes, or `V37 ENTR 00 ENTR` to change programs. Pressing `KEY REL` returns the DSKY to following the timeline.
 
 ---
 

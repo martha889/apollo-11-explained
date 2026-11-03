@@ -32,6 +32,7 @@ jobs:
           mkdir -p _site
           cp explained/live/apollo11_live.html _site/index.html
           cp explained/live/screenshot.png _site/
+          mkdir -p _site/audio && cp explained/live/audio/*.mp3 _site/audio/
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:

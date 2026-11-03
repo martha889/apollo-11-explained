@@ -780,12 +780,24 @@ def build_data():
 def load_transcript():
     """Verbatim crew and Mission Control lines with their GET (see transcript.json)."""
     t = json.loads((LIVE / "transcript.json").read_text(encoding="utf-8"))
+    clips = {c["get"]: c for c in json.loads((LIVE / "audio" / "clips.json").read_text(encoding="utf-8"))["clips"]}
+    for stamp, c in clips.items():
+        if not (LIVE / "audio" / c["clip"]).is_file():
+            raise SystemExit(f"build.py: missing audio clip audio/{c['clip']} (run tools/cut_audio.py)")
+    known = {line[0] for line in t["lines"]}
+    if set(clips) - known:
+        raise SystemExit(f"build.py: audio clips with no transcript line: {sorted(set(clips) - known)}")
     lines = []
     for stamp, who, text, kind, src in t["lines"]:
         h, m, sec = (int(x) for x in stamp.split(":"))
         if src not in t["sources"] or kind not in ("air", "onboard"):
             raise SystemExit(f"build.py: bad transcript line at {stamp}")
-        lines.append(dict(get=get(h, m, sec), who=who, text=text, kind=kind, src=src))
+        line = dict(get=get(h, m, sec), who=who, text=text, kind=kind, src=src)
+        if stamp in clips:
+            c = clips[stamp]
+            line["audio"] = "audio/" + c["clip"]
+            line["dur"] = round(c["t1"] - c["t0"], 2)
+        lines.append(line)
     return dict(note=t["note"], sources=t["sources"], lines=lines)
 
 

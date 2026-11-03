@@ -1,0 +1,215 @@
+{
+ "note": "Excerpts of NASA's Apollo 11 air-to-ground and onboard recordings (public domain), cut from the clips the Apollo Flight Journal and Apollo Lunar Surface Journal publish at the source URLs. t0/t1 are seconds into each source file. Each excerpt was located with speech recognition and checked word by word against the transcript. Rebuild with tools/cut_audio.py.",
+ "clips": [
+  {
+   "get": "000:00:13",
+   "clip": "a11-0000013.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0000000.mp3",
+   "t0": 29.9,
+   "t1": 31.7
+  },
+  {
+   "get": "000:03:17",
+   "clip": "a11-0000317.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0000255.mp3",
+   "t0": 25.99,
+   "t1": 27.45
+  },
+  {
+   "get": "002:26:38",
+   "clip": "a11-0022638.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0022500.mp3",
+   "t0": 96.69,
+   "t1": 101.41
+  },
+  {
+   "get": "002:44:19",
+   "clip": "a11-0024419.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0024020.mp3",
+   "t0": 240.3,
+   "t1": 241.4
+  },
+  {
+   "get": "002:44:27",
+   "clip": "a11-0024427.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0024020.mp3",
+   "t0": 247.81,
+   "t1": 251.47
+  },
+  {
+   "get": "075:30:46",
+   "clip": "a11-0753046.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0752600.mp3",
+   "t0": 264.65,
+   "t1": 268.37
+  },
+  {
+   "get": "075:30:53",
+   "clip": "a11-0753053.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_0752600.mp3",
+   "t0": 271.59,
+   "t1": 273.67
+  },
+  {
+   "get": "100:18:01",
+   "clip": "a11-1001801.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_1001400.mp3",
+   "t0": 223.7,
+   "t1": 225.5
+  },
+  {
+   "get": "100:18:04",
+   "clip": "a11-1001804.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_1001400.mp3",
+   "t0": 226.9,
+   "t1": 228.4
+  },
+  {
+   "get": "102:28:51",
+   "clip": "a11-1022851.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1021133-3114.mp3",
+   "t0": 1038.21,
+   "t1": 1041.19
+  },
+  {
+   "get": "102:38:30",
+   "clip": "a11-1023830.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 434.8,
+   "t1": 436.0
+  },
+  {
+   "get": "102:38:42",
+   "clip": "a11-1023842.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 447.2,
+   "t1": 455.6
+  },
+  {
+   "get": "102:38:53",
+   "clip": "a11-1023853.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 457.95,
+   "t1": 460.35
+  },
+  {
+   "get": "102:42:08",
+   "clip": "a11-1024208.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 651.45,
+   "t1": 656.73
+  },
+  {
+   "get": "102:42:19",
+   "clip": "a11-1024219.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 663.2,
+   "t1": 668.3
+  },
+  {
+   "get": "102:42:25",
+   "clip": "a11-1024225.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 668.15,
+   "t1": 673.75
+  },
+  {
+   "get": "102:43:16",
+   "clip": "a11-1024316.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 719.11,
+   "t1": 723.21
+  },
+  {
+   "get": "102:45:02",
+   "clip": "a11-1024502.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 825.2,
+   "t1": 826.3
+  },
+  {
+   "get": "102:45:08",
+   "clip": "a11-1024508.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 827.2,
+   "t1": 837.3
+  },
+  {
+   "get": "102:45:17",
+   "clip": "a11-1024517.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 840.3,
+   "t1": 843.4
+  },
+  {
+   "get": "102:45:31",
+   "clip": "a11-1024531.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 854.09,
+   "t1": 855.49
+  },
+  {
+   "get": "102:45:40",
+   "clip": "a11-1024540.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 861.43,
+   "t1": 864.45
+  },
+  {
+   "get": "102:45:58",
+   "clip": "a11-1024558.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 882.6,
+   "t1": 889.0
+  },
+  {
+   "get": "102:46:06",
+   "clip": "a11-1024606.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1023114-4746.mp3",
+   "t0": 889.3,
+   "t1": 896.2
+  },
+  {
+   "get": "109:24:23",
+   "clip": "a11-1092423.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1091545-1101226.mp3",
+   "t0": 516.9,
+   "t1": 525.7
+  },
+  {
+   "get": "124:21:54",
+   "clip": "a11-1242154.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1234747-1243113.mp3",
+   "t0": 2037.9,
+   "t1": 2046.6
+  },
+  {
+   "get": "124:31:00",
+   "clip": "a11-1243100.mp3",
+   "source": "https://apollojournals.org/alsj/a11/a11a1234747-1243113.mp3",
+   "t0": 2582.2,
+   "t1": 2587.0
+  },
+  {
+   "get": "134:37:53",
+   "clip": "a11-1343753.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_1343753.mp3",
+   "t0": 4.15,
+   "t1": 7.37
+  },
+  {
+   "get": "135:36:28",
+   "clip": "a11-1353628.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_1353310.mp3",
+   "t0": 199.69,
+   "t1": 203.71
+  },
+  {
+   "get": "195:15:07",
+   "clip": "a11-1951507.mp3",
+   "source": "https://apollojournals.org/afj/ap11fj/audio/a11_1951503.mp3",
+   "t0": 6.7,
+   "t1": 9.5
+  }
+ ]
+}

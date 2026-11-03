@@ -92,6 +92,11 @@ button, select, input { font: inherit; color: inherit; }
 .voice .vl.now .vx { white-space: normal; }
 .voice .ob { font-family: var(--font-display); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); margin-left: 6px; }
 .voice .empty { color: var(--faint); font-size: 12px; }
+.voice .vplay { background: none; border: 0; padding: 0 2px; margin-right: 4px; color: var(--muted); cursor: pointer; font-size: 11px; line-height: 1; vertical-align: baseline; }
+.voice .vplay:hover { color: var(--fg); }
+.voice .vl.speaking .vx { color: var(--fg); }
+.voice .vl.speaking .vplay { color: var(--amber); }
+.voice .hint { color: var(--amber); font-size: 11.5px; }
 .voice .empty a, .voice .src a { color: var(--muted); }
 .voice a.src { font-size: 11px; color: var(--faint); margin-left: 6px; }
 
@@ -133,6 +138,74 @@ button, select, input { font: inherit; color: inherit; }
 .caption .src { display: inline-block; font-family: var(--font-display); font-weight: 600; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 2px; padding: 0 4px; margin-right: 6px; border: 1px solid var(--line); color: var(--muted); }
 .caption .src.sim { border-color: var(--el); color: var(--el); }
 .dsky-toggle { display: none; gap: 6px; }
+
+/* DSKY Keyboard */
+.dsky-keyboard {
+  background: var(--dsky-body);
+  border: 2px solid var(--dsky-edge);
+  border-radius: 6px;
+  padding: 1.2cqi 2cqi;
+  display: grid;
+  grid-template-columns: 1fr 5fr 1fr;
+  gap: 1.4cqi;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  user-select: none;
+}
+.dsky-card.active .dsky-keyboard { border-color: var(--amber-dim); }
+.dsky-card .dsky.off ~ .dsky-keyboard .kbtn { opacity: 0.35; cursor: not-allowed; }
+.kcol-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  gap: 1cqi;
+}
+.kgrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1cqi;
+}
+.kbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #25282e;
+  color: var(--fg);
+  border: 1px solid #1a1c20;
+  border-radius: 2px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 2.4cqi;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  padding: 0;
+  min-height: 4.4cqi;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+  cursor: pointer;
+  user-select: none;
+}
+.kbtn:hover {
+  background: #32363e;
+  color: #ffffff;
+}
+.kbtn:active {
+  transform: translateY(1px);
+  background: #1c1e22;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+}
+.kbtn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 1px;
+  z-index: 2;
+}
+.dsky-hint {
+  padding: 6px 12px 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+  margin: 0;
+}
 
 /* Code */
 .code { min-height: 0; }
@@ -199,7 +272,7 @@ button, select, input { font: inherit; color: inherit; }
   .code .listing { max-height: 460px; }
 }
 @media (max-width: 700px) {
-  :root { --bar-h: 132px; }
+  :root { --bar-h: 172px; }
   .dskys { grid-template-columns: minmax(0, 1fr); }
   .dsky-toggle { display: flex; }
   .dskys[data-show="CM"] .dsky-card[data-c="LM"], .dskys[data-show="LM"] .dsky-card[data-c="CM"] { display: none; }
@@ -250,15 +323,18 @@ button, select, input { font: inherit; color: inherit; }
             <button class="tab" id="show-lm" aria-label="Show Eagle's DSKY" aria-selected="false">Eagle</button>
           </div>
         </div>
+        <p class="dsky-hint">Try it: pause and key V16 N36 ENTR to watch the AGC clock, or V35 ENTR for a lamp test.</p>
         <div class="dskys" id="dskys" data-show="CM" style="padding: 10px 12px 12px;">
           <div class="dsky-card" data-c="CM" id="card-CM">
             <div class="dsky-title"><h3>Columbia · CM</h3><span class="sw">Comanche055</span><span class="badge" id="badge-CM">Active</span></div>
             <div class="dsky" id="dsky-CM"></div>
+            <div class="dsky-keyboard" id="kb-CM" role="group" aria-label="Columbia DSKY keyboard"></div>
             <div class="caption" id="cap-CM"></div>
           </div>
           <div class="dsky-card" data-c="LM" id="card-LM">
             <div class="dsky-title"><h3>Eagle · LM</h3><span class="sw">Luminary099</span><span class="badge" id="badge-LM">Off</span></div>
             <div class="dsky" id="dsky-LM"></div>
+            <div class="dsky-keyboard" id="kb-LM" role="group" aria-label="Eagle DSKY keyboard"></div>
             <div class="caption" id="cap-LM"></div>
           </div>
         </div>
@@ -297,6 +373,7 @@ button, select, input { font: inherit; color: inherit; }
       <button id="speed-2" data-s="2" aria-label="Double speed" aria-pressed="false">2×</button>
       <button id="speed-4" data-s="4" aria-label="Four times speed" aria-pressed="false">4×</button>
     </div>
+    <button class="btn" id="sound" aria-label="Turn sound off" aria-pressed="true" title="Play the real crew and Mission Control voices"><svg viewBox="0 0 16 16" id="sound-icon"><path d="M2 6h3l4-3v10l-4-3H2z"/><path d="M11 5.2a4 4 0 0 1 0 5.6M12.8 3.4a6.5 6.5 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span id="sound-text">Sound on</span></button>
     <select class="jump" id="jump" aria-label="Jump to event"></select>
     <span class="ptime" id="ptime">0:00 / 0:00</span>
   </div>
@@ -421,8 +498,316 @@ button, select, input { font: inherit; color: inherit; }
     var q = function (x) { return root.querySelector('[data-x="' + x + '"]'); };
     DS[c] = {
       root: root, ca: q("ca"), prog: q("prog"), verb: q("verb"), noun: q("noun"), r: [q("r0"), q("r1"), q("r2")],
-      lamps: Array.prototype.slice.call(root.querySelectorAll(".lamp")), key: null, frames: [], gets: []
+      lamps: Array.prototype.slice.call(root.querySelectorAll(".lamp")), key: null, frames: [], gets: [],
+      crewMode: false, model: null
     };
+    buildKeyboard(c);
+  }
+
+  var KEYPAD_DEFS = {
+    sideLeft: [
+      { k: "VERB", id: "VERB", label: "Verb", text: "VERB" },
+      { k: "NOUN", id: "NOUN", label: "Noun", text: "NOUN" }
+    ],
+    grid: [
+      { k: "+", id: "plus", label: "Plus", text: "+" },
+      { k: "7", id: "7", label: "7", text: "7" },
+      { k: "8", id: "8", label: "8", text: "8" },
+      { k: "9", id: "9", label: "9", text: "9" },
+      { k: "CLR", id: "CLR", label: "Clear", text: "CLR" },
+
+      { k: "-", id: "minus", label: "Minus", text: "&minus;" },
+      { k: "4", id: "4", label: "4", text: "4" },
+      { k: "5", id: "5", label: "5", text: "5" },
+      { k: "6", id: "6", label: "6", text: "6" },
+      { k: "PRO", id: "PRO", label: "Proceed", text: "PRO" },
+
+      { k: "0", id: "0", label: "0", text: "0" },
+      { k: "1", id: "1", label: "1", text: "1" },
+      { k: "2", id: "2", label: "2", text: "2" },
+      { k: "3", id: "3", label: "3", text: "3" },
+      { k: "KEY REL", id: "KEYREL", label: "Key Release", text: "KEY<br>REL" }
+    ],
+    sideRight: [
+      { k: "ENTR", id: "ENTR", label: "Enter", text: "ENTR" },
+      { k: "RSET", id: "RSET", label: "Reset", text: "RSET" }
+    ]
+  };
+
+  function renderKeyButton(c, item) {
+    return '<button type="button" class="kbtn" id="key-' + c + '-' + item.id + '" data-k="' + item.k + '" aria-label="' + item.label + '">' + item.text + '</button>';
+  }
+
+  function buildKeyboard(c) {
+    var kb = $("kb-" + c);
+    if (!kb) return;
+    var h = '<div class="kcol-side">';
+    KEYPAD_DEFS.sideLeft.forEach(function (it) { h += renderKeyButton(c, it); });
+    h += '</div><div class="kgrid">';
+    KEYPAD_DEFS.grid.forEach(function (it) { h += renderKeyButton(c, it); });
+    h += '</div><div class="kcol-side">';
+    KEYPAD_DEFS.sideRight.forEach(function (it) { h += renderKeyButton(c, it); });
+    h += '</div>';
+    kb.innerHTML = h;
+
+    kb.addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      var k = btn.getAttribute("data-k");
+      if (k) onDskyKey(c, k);
+    });
+  }
+
+  function initDskyModel(c, g) {
+    var d = DS[c];
+    var i = bsearch(d.gets, g);
+    var k = (c === "CM" || lmOn(g)) && i >= 0 ? d.frames[i] : null;
+    var lamps = {};
+    LAMPS[c].forEach(function (l) {
+      if (l[0]) lamps[l[0]] = k ? (k.lights.indexOf(l[0]) >= 0) : false;
+    });
+    return {
+      computer: c,
+      prog: k ? k.prog : "00",
+      verb: k ? k.verb : "  ",
+      noun: k ? k.noun : "  ",
+      r: k ? [k.r[0] || "      ", k.r[1] || "      ", k.r[2] || "      "] : ["      ", "      ", "      "],
+      lamps: lamps,
+      vnFlash: k ? !!k.flash : false,
+      compActy: false,
+      entryTarget: "",
+      entryBuf: "",
+      monitor: null,
+      lampTestTimer: null,
+      lampTestRunning: false,
+      savedDisplay: null,
+      resetPressed: false
+    };
+  }
+
+  function formatClockRegs(g) {
+    var t = Math.max(0, g);
+    var h = Math.floor(t / 3600);
+    var rem = t - h * 3600;
+    var m = Math.floor(rem / 60);
+    var s = rem - m * 60;
+    var s100 = Math.floor((s + 0.0001) * 100) % 6000;
+    return [
+      "+" + "00" + pad(h % 1000, 3),
+      "+" + "000" + pad(m % 100, 2),
+      "+" + pad(s100, 5)
+    ];
+  }
+
+  function executeEnter(c, m) {
+    if (m.entryTarget === "MM") {
+      var mmNum = parseInt(m.entryBuf, 10);
+      if (m.entryBuf.length > 0 && mmNum === 0) {
+        m.prog = "00";
+        m.vnFlash = false;
+        m.entryTarget = "";
+        m.entryBuf = "";
+      } else {
+        m.lamps["OPR ERR"] = true;
+        m.vnFlash = false;
+        m.entryTarget = "";
+        m.entryBuf = "";
+      }
+      return;
+    }
+
+    m.entryTarget = "";
+    m.entryBuf = "";
+
+    var v = parseInt(m.verb.trim(), 10);
+    var n = parseInt(m.noun.trim(), 10);
+    if (isNaN(v)) v = 0;
+    if (isNaN(n)) n = 0;
+
+    // V37E: Change Major Mode
+    if (v === 37) {
+      m.vnFlash = true;
+      m.noun = "  ";
+      m.entryTarget = "MM";
+      m.entryBuf = "";
+      return;
+    }
+
+    // V35E: Lamp Test
+    if (v === 35) {
+      m.savedDisplay = {
+        prog: m.prog,
+        verb: m.verb,
+        noun: m.noun,
+        r: m.r.slice(),
+        compActy: m.compActy,
+        vnFlash: m.vnFlash,
+        lamps: Object.assign({}, m.lamps)
+      };
+      m.lampTestRunning = true;
+      m.prog = "88";
+      m.verb = "88";
+      m.noun = "88";
+      m.r = ["+88888", "+88888", "+88888"];
+      m.compActy = true;
+      m.vnFlash = false;
+      LAMPS[c].forEach(function (l) {
+        if (l[0]) m.lamps[l[0]] = true;
+      });
+      if (m.lampTestTimer) clearTimeout(m.lampTestTimer);
+      m.lampTestTimer = setTimeout(function () {
+        m.lampTestTimer = null;
+        m.lampTestRunning = false;
+        if (DS[c].crewMode && DS[c].model === m && m.savedDisplay) {
+          m.prog = m.savedDisplay.prog;
+          m.verb = m.savedDisplay.verb;
+          m.noun = m.savedDisplay.noun;
+          m.r = m.savedDisplay.r.slice();
+          m.compActy = m.savedDisplay.compActy;
+          m.vnFlash = m.savedDisplay.vnFlash;
+          m.lamps = Object.assign({}, m.savedDisplay.lamps);
+          state.dirty = true;
+        }
+      }, 5000);
+      return;
+    }
+
+    var curGet = playToGet(state.play);
+
+    // V06N36E / V16N36E: AGC clock
+    if ((v === 6 || v === 16) && n === 36) {
+      m.r = formatClockRegs(curGet);
+      m.vnFlash = false;
+      m.monitor = (v === 16) ? "N36" : null;
+      return;
+    }
+
+    // V05N09E: Alarm codes in octal
+    if (v === 5 && n === 9) {
+      var alarms = [];
+      if (c === "LM") {
+        if (EV["alarm-1202"] && curGet >= EV["alarm-1202"].get) alarms.push("01202");
+        if (EV["alarm-1201"] && curGet >= EV["alarm-1201"].get) alarms.push("01201");
+      }
+      m.r = [
+        alarms[0] ? " " + alarms[0] : "      ",
+        alarms[1] ? " " + alarms[1] : "      ",
+        alarms[2] ? " " + alarms[2] : "      "
+      ];
+      m.vnFlash = false;
+      m.monitor = null;
+      if (alarms.length > 0 && !m.resetPressed) {
+        m.lamps["PROG"] = true;
+      }
+      return;
+    }
+
+    // V06Nxx / V16Nxx matching timeline keyframe noun
+    if (v === 6 || v === 16) {
+      var i = bsearch(DS[c].gets, curGet);
+      var k = (c === "CM" || lmOn(curGet)) && i >= 0 ? DS[c].frames[i] : null;
+      if (k && k.noun && parseInt(k.noun, 10) === n) {
+        m.r = [k.r[0] || "      ", k.r[1] || "      ", k.r[2] || "      "];
+        m.vnFlash = false;
+        m.monitor = (v === 16) ? "TIMELINE" : null;
+        return;
+      }
+    }
+
+    // Anything else: OPR ERR light
+    m.lamps["OPR ERR"] = true;
+  }
+
+  function onDskyKey(c, key) {
+    var g = playToGet(state.play);
+    var on = c === "CM" || lmOn(g);
+    if (!on) return; // LM DSKY is off outside D.lm_power, so its keys do nothing then
+
+    setPlaying(false);
+
+    var d = DS[c];
+    if (!d.crewMode || !d.model) {
+      d.crewMode = true;
+      d.model = initDskyModel(c, g);
+    }
+    var m = d.model;
+
+    // If lamp test is running and user presses a key, cancel lamp test
+    if (m.lampTestRunning) {
+      if (m.lampTestTimer) clearTimeout(m.lampTestTimer);
+      m.lampTestTimer = null;
+      m.lampTestRunning = false;
+      if (m.savedDisplay) {
+        m.prog = m.savedDisplay.prog;
+        m.verb = m.savedDisplay.verb;
+        m.noun = m.savedDisplay.noun;
+        m.r = m.savedDisplay.r.slice();
+        m.compActy = m.savedDisplay.compActy;
+        m.vnFlash = m.savedDisplay.vnFlash;
+        m.lamps = Object.assign({}, m.savedDisplay.lamps);
+      }
+    }
+
+    if (key === "VERB") {
+      m.entryTarget = "VERB";
+      m.entryBuf = "";
+      m.verb = "  ";
+      m.monitor = null;
+    } else if (key === "NOUN") {
+      m.entryTarget = "NOUN";
+      m.entryBuf = "";
+      m.noun = "  ";
+      m.monitor = null;
+    } else if (key >= "0" && key <= "9") {
+      if (m.entryTarget === "VERB") {
+        m.entryBuf = (m.entryBuf + key).slice(0, 2);
+        m.verb = (m.entryBuf + "  ").slice(0, 2);
+      } else if (m.entryTarget === "NOUN" || m.entryTarget === "MM") {
+        m.entryBuf = (m.entryBuf + key).slice(0, 2);
+        m.noun = (m.entryBuf + "  ").slice(0, 2);
+      } else {
+        m.lamps["OPR ERR"] = true;
+      }
+    } else if (key === "CLR") {
+      m.entryBuf = "";
+      if (m.entryTarget === "VERB") {
+        m.verb = "  ";
+      } else if (m.entryTarget === "NOUN" || m.entryTarget === "MM") {
+        m.noun = "  ";
+      }
+    } else if (key === "RSET") {
+      m.lamps["OPR ERR"] = false;
+      m.lamps["PROG"] = false;
+      m.lamps["RESTART"] = false;
+      m.resetPressed = true;
+    } else if (key === "PRO") {
+      m.vnFlash = false;
+    } else if (key === "KEY REL") {
+      if (m.lampTestTimer) clearTimeout(m.lampTestTimer);
+      m.lampTestTimer = null;
+      m.lampTestRunning = false;
+      d.crewMode = false;
+      d.model = null;
+      d.key = null; // force redraw by resetting DS[c].key
+      var pi = phaseAt(g);
+      var ph = D.phases[pi];
+      var codeComp = D.code.filter(function (x) { return g >= x.get_start && g < x.get_end; })[0];
+      var active = codeComp ? codeComp.computer : (ph ? ph.active_computer : "CM");
+      updateDsky(c, g, active, Math.floor(performance.now() / 380) % 2 === 0);
+      state.dirty = true;
+      return;
+    } else if (key === "ENTR") {
+      executeEnter(c, m);
+    } else {
+      m.lamps["OPR ERR"] = true;
+    }
+
+    var pi2 = phaseAt(g);
+    var ph2 = D.phases[pi2];
+    var codeComp2 = D.code.filter(function (x) { return g >= x.get_start && g < x.get_end; })[0];
+    var active2 = codeComp2 ? codeComp2.computer : (ph2 ? ph2.active_computer : "CM");
+    updateDsky(c, g, active2, Math.floor(performance.now() / 380) % 2 === 0);
+    state.dirty = true;
   }
   buildDsky("CM"); buildDsky("LM");
   D.dsky.forEach(function (k) { DS[k.computer].frames.push(k); });
@@ -443,6 +828,56 @@ button, select, input { font: inherit; color: inherit; }
   function updateDsky(c, g, activeComp, blinkOn) {
     var d = DS[c];
     var on = c === "CM" || lmOn(g);
+
+    if (d.crewMode && d.model) {
+      if (!on) {
+        writePair(d.prog, ""); writePair(d.verb, ""); writePair(d.noun, "");
+        d.r.forEach(function (el) { writeReg(el, ""); });
+        d.lamps.forEach(function (l) { l.classList.remove("on"); });
+        d.root.classList.add("off");
+        $("cap-" + c).innerHTML = '<span class="src">Off</span>Eagle\'s computer is powered down.';
+        $("card-" + c).classList.toggle("active", false);
+        $("badge-" + c).textContent = "Off";
+        return;
+      }
+
+      d.root.classList.remove("off");
+      var m = d.model;
+
+      if (m.monitor === "N36") {
+        m.r = formatClockRegs(g);
+      } else if (m.monitor === "TIMELINE") {
+        var mi = bsearch(d.gets, g);
+        var mk = mi >= 0 ? d.frames[mi] : null;
+        if (mk) {
+          m.r = [mk.r[0] || "      ", mk.r[1] || "      ", mk.r[2] || "      "];
+        }
+      }
+
+      writePair(d.prog, m.prog);
+      writePair(d.verb, m.verb);
+      writePair(d.noun, m.noun);
+      for (var r = 0; r < 3; r++) writeReg(d.r[r], m.r[r]);
+
+      d.lamps.forEach(function (l) {
+        var lname = l.getAttribute("data-l");
+        l.classList.toggle("on", !!(lname && m.lamps[lname]));
+      });
+
+      var hide = m.vnFlash && !blinkOn && !reduceMotion;
+      d.verb.classList.toggle("blink-hidden", hide);
+      d.noun.classList.toggle("blink-hidden", hide);
+
+      d.ca.classList.toggle("on", !!m.compActy);
+
+      var act = c === activeComp;
+      $("card-" + c).classList.toggle("active", act);
+      $("badge-" + c).textContent = act ? "Active" : "Standby";
+
+      $("cap-" + c).innerHTML = '<span class="src sim">Crew mode</span>You are keying this DSKY. KEY REL returns to the mission display.';
+      return;
+    }
+
     var i = bsearch(d.gets, g);
     var k = on && i >= 0 ? d.frames[i] : null;
     var key = on ? (k ? k.get + "|" + k.prog + k.verb + k.noun + k.r.join(",") + k.lights.join(",") : "idle") : "off";
@@ -572,6 +1007,52 @@ button, select, input { font: inherit; color: inherit; }
   $("tab-agc").addEventListener("click", function () { setTab("agc"); });
   $("tab-py").addEventListener("click", function () { setTab("py"); });
 
+  // ---------- real voices (NASA recordings, see audio/clips.json) ----------
+  var voice = { on: true, el: null, line: null, hold: false, blocked: false, lastG: null };
+  try { if (localStorage.getItem("a11-sound") === "off") voice.on = false; } catch (e) {}
+  function stopVoice() {
+    if (voice.el) { try { voice.el.pause(); } catch (e) {} }
+    voice.el = null; voice.line = null; voice.hold = false; voiceKey = null;
+  }
+  function playLine(l, hold) {
+    stopVoice();
+    if (!l || !l.audio) return;
+    var a = new Audio(l.audio);
+    voice.el = a; voice.line = l; voice.hold = !!hold;
+    var done = function () { if (voice.el === a) { voice.el = null; voice.line = null; voice.hold = false; voiceKey = null; } };
+    a.addEventListener("ended", done);
+    a.addEventListener("error", done);
+    var pr = a.play();
+    if (pr && pr.catch) pr.catch(function () { done(); voice.blocked = true; voiceKey = null; });
+    else voice.blocked = false;
+    if (pr && pr.then) pr.then(function () { voice.blocked = false; voiceKey = null; });
+    voiceKey = null;
+  }
+  // Called every frame: start the clip of any line the playing clock has just crossed.
+  function voiceTick(g) {
+    var prev = voice.lastG; voice.lastG = g;
+    if (!voice.on || !state.playing || prev === null || g <= prev || g - prev > 600) return;
+    var i = bsearch(TRG, g);
+    if (i >= 0 && TRG[i] > prev && TR.lines[i].audio) playLine(TR.lines[i], true);
+  }
+  function setSound(on) {
+    voice.on = on;
+    if (!on) stopVoice();
+    voice.blocked = false; voiceKey = null;
+    $("sound").setAttribute("aria-pressed", on);
+    $("sound").setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
+    $("sound-text").textContent = on ? "Sound on" : "Sound off";
+    $("sound-icon").style.opacity = on ? 1 : 0.45;
+    try { localStorage.setItem("a11-sound", on ? "on" : "off"); } catch (e) {}
+  }
+  $("sound").addEventListener("click", function () { setSound(!voice.on); });
+  $("voice").addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest(".vplay");
+    if (!b) return;
+    var l = TR.lines[parseInt(b.getAttribute("data-i"), 10)];
+    if (voice.line === l) stopVoice(); else playLine(l, false);
+  });
+
   // ---------- voice loop (verbatim transcript lines) ----------
   var TR = D.transcript, TRG = TR.lines.map(function (l) { return l.get; }), voiceKey = null;
   function updateVoice(g, p) {
@@ -590,8 +1071,10 @@ button, select, input { font: inherit; color: inherit; }
       var cls = k === shown.length - 1 ? "now" : k === 0 && shown.length === 3 ? "old" : "";
       var role = /CAPCOM|Hornet|Swim/.test(l.who) ? "capcom" : "crew";
       var src = cls === "now" ? ' <a class="src" href="' + TR.sources[l.src] + '" target="_blank" rel="noopener">source</a>' : "";
-      return '<div class="vl ' + cls + '"><span class="vt">' + fmtGET(l.get) + '</span><span class="vw ' + role + '">' + esc(l.who) + '</span><span class="vx">' + esc(l.text) + (l.kind === "onboard" ? '<span class="ob">onboard recorder</span>' : "") + src + "</span></div>";
-    }).join("");
+      var btn = l.audio ? '<button class="vplay" type="button" data-i="' + TR.lines.indexOf(l) + '" aria-label="Play this recording" title="Play the recording">&#9654;</button>' : "";
+      var sp = voice.line === l ? " speaking" : "";
+      return '<div class="vl ' + cls + sp + '"><span class="vt">' + fmtGET(l.get) + '</span><span class="vw ' + role + '">' + esc(l.who) + '</span><span class="vx">' + btn + esc(l.text) + (l.kind === "onboard" ? '<span class="ob">onboard recorder</span>' : "") + src + "</span></div>";
+    }).join("") + (voice.blocked ? '<div class="hint">Press Play or Sound on to hear the real voices.</div>' : "");
   }
 
   // ---------- canvas ----------
@@ -1040,10 +1523,11 @@ button, select, input { font: inherit; color: inherit; }
   jump.addEventListener("change", function () { if (jump.value) { seekEvent(jump.value, true); jump.value = ""; } });
   var scrub = $("scrub");
   scrub.max = TOTAL;
-  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); state.dirty = true; });
+  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); state.dirty = true; stopVoice(); voice.lastG = null; });
 
   function setPlaying(p) {
     state.playing = p && state.play < TOTAL;
+    if (!state.playing && voice.hold) stopVoice();
     $("play-text").textContent = state.playing ? "Pause" : "Play";
     $("play").setAttribute("aria-label", state.playing ? "Pause" : "Play");
     $("play-icon").innerHTML = state.playing ? '<path d="M3 2h4v12H3zM9 2h4v12H9z"/>' : '<path d="M4 2l10 6-10 6z"/>';
@@ -1052,6 +1536,7 @@ button, select, input { font: inherit; color: inherit; }
   function seekEvent(id, keepPlaying) {
     var e = EV[id]; if (!e) return;
     state.play = Math.min(TOTAL, getToPlay(e.get) + 0.002);
+    stopVoice(); voice.lastG = null;
     state.lastEvent = e; state.dirty = true;
     showToast(e);
     if (!keepPlaying) setPlaying(false);
@@ -1108,7 +1593,7 @@ button, select, input { font: inherit; color: inherit; }
   function frame(now) {
     var dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (state.playing) {
-      state.play += dt * state.speed;
+      if (!voice.hold) state.play += dt * state.speed; // the clock waits while someone is speaking
       if (state.play >= TOTAL) { state.play = TOTAL; setPlaying(false); }
       state.dirty = true;
     }
@@ -1130,6 +1615,7 @@ button, select, input { font: inherit; color: inherit; }
       Array.prototype.forEach.call(bands.children, function (b, i) { b.classList.toggle("cur", i === pi); });
     }
     $("event").innerHTML = ev ? "<b>" + esc(ev.short) + "</b> " + fmtGET(ev.get) + " · " + esc(ev.label) : "";
+    voiceTick(g);
     updateVoice(g, state.play);
     var codeComp = D.code.filter(function (c) { return g >= c.get_start && g < c.get_end; })[0];
     var active = codeComp ? codeComp.computer : ph.active_computer;
@@ -1153,6 +1639,7 @@ button, select, input { font: inherit; color: inherit; }
   }
   var hashed = fromHash();
   if (!hashed) { state.play = 0; state.lastEvent = EV.launch; showToast(EV.launch); }
+  setSound(voice.on);
   setPlaying(!hashed && !reduceMotion);
   if (window.innerWidth <= 700) showDsky("CM");
   requestAnimationFrame(frame);
