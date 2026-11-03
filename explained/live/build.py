@@ -400,10 +400,13 @@ def track_descent(dsky):
               get=r1(g), x=r1(s["downrange"], 3), y=r1(s["alt_true"] / 1000.0, 3), phase=[int(p) for p in s["phase"]],
               pitch_deg=r1(s["pitch_deg"], 1), throttle=r1(s["throttle"], 3), v_vert=r1(s["v_vert"], 1),
               note="Powered descent from the P63/P64/P66 simulation (lm_01).")
+    valid = np.nonzero(s["delta_h"] < 90_000.0)[0]
+    first_lock = int(valid[0]) if len(valid) else len(t)
     for i in range(len(t)):
         ph = int(s["phase"][i])
         ti = float(t[i])
-        lr_bad = s["delta_h"][i] >= 90_000.0
+        # ALT/VEL stay lit until the landing radar first locks on
+        lr_bad = i < first_lock
         lights = ["ALT", "VEL"] if lr_bad else []
         hdot = s["v_vert"][i] * FT * 10
         hcalc = s["alt_nav"][i] * FT
@@ -414,7 +417,7 @@ def track_descent(dsky):
                 rng_nm = math.hypot(s["downrange"][i] * 1000.0, s["alt_true"][i]) / NMI
                 ttg = -float(s["ttf"][i])
                 row = dict(prog="63", verb="16", noun="68",
-                           r=[reg(rng_nm * 10, 0), mmss(max(ttg, 0)), "" if lr_bad else reg(s["delta_h"][i] * FT, 0)],
+                           r=[reg(rng_nm * 10, 0), mmss(max(ttg, 0)), "" if s["delta_h"][i] >= 90_000.0 else reg(s["delta_h"][i] * FT, 0)],
                            caption="V16N68: slant range to the site (nmi, xxxx.x), time to go in braking (min sec), radar minus computed altitude (ft).")
         elif ph == 64:
             tre = max(0, min(99, int(round(s["tredes"][i]))))
