@@ -33,6 +33,7 @@ python explained/mission.py --only lm_02    # Run a single phase by short ID, mo
 
 - **Trajectory**: the spacecraft's path, with a view that changes with each phase (Earth orbit, the Earth–Moon figure-8, lunar orbit, the descent profile, rendezvous, entry).
 - **Guidance computers**: Columbia's and Eagle's DSKYs as the crew saw them. They show the program, verb, noun, registers and warning lights, including the 1202/1201 alarms.
+- **Voice loop**: what the crew and Mission Control said at that moment, verbatim and timed to the GET, from NASA's transcripts as published in the [Apollo Flight Journal](https://apollojournals.org/afj/) and [Apollo Lunar Surface Journal](https://apollojournals.org/alsj/) (lines and sources in [`live/transcript.json`](live/transcript.json)).
 - **Code**: the AGC source that was running at that moment, quoted line for line from `Comanche055/` and `Luminary099/`, next to its Python translation from this folder.
 
 ```bash

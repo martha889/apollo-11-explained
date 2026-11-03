@@ -80,6 +80,20 @@ button, select, input { font: inherit; color: inherit; }
 .event-strip b { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--amber); white-space: nowrap; }
 .event-strip .t { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
 .event-strip span:last-child { min-width: 0; }
+.voice { border-top: 1px solid var(--line); padding: 6px 12px 8px; height: 82px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
+.voice .vl { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; align-items: baseline; color: var(--muted); font-size: 12.5px; line-height: 1.35; transition: color 0.5s, opacity 0.5s; }
+.voice .vl.now { color: var(--fg); }
+.voice .vl.old { opacity: 0.55; }
+.voice .vt { font-family: var(--font-mono); font-size: 11.5px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.voice .vw { font-family: var(--font-display); font-weight: 600; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.voice .vw.capcom { color: var(--csm); }
+.voice .vw.crew { color: var(--amber); }
+.voice .vx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.voice .vl.now .vx { white-space: normal; }
+.voice .ob { font-family: var(--font-display); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); margin-left: 6px; }
+.voice .empty { color: var(--faint); font-size: 12px; }
+.voice .empty a, .voice .src a { color: var(--muted); }
+.voice a.src { font-size: 11px; color: var(--faint); margin-left: 6px; }
 
 .right { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; min-width: 0; height: max(460px, calc(100vh - 210px)); height: max(460px, calc(100dvh - 210px)); }
 
@@ -224,6 +238,7 @@ button, select, input { font: inherit; color: inherit; }
         <canvas id="scope" role="img" aria-label="Animated trajectory of the spacecraft"></canvas>
       </div>
       <div class="event-strip" id="toast" aria-live="polite"></div>
+      <div class="voice" id="voice" aria-label="Voice loop: what the crew and Mission Control said"></div>
     </section>
 
     <div class="right">
@@ -556,6 +571,28 @@ button, select, input { font: inherit; color: inherit; }
   }
   $("tab-agc").addEventListener("click", function () { setTab("agc"); });
   $("tab-py").addEventListener("click", function () { setTab("py"); });
+
+  // ---------- voice loop (verbatim transcript lines) ----------
+  var TR = D.transcript, TRG = TR.lines.map(function (l) { return l.get; }), voiceKey = null;
+  function updateVoice(g, p) {
+    var i = bsearch(TRG, g), shown = [];
+    // up to three recent lines, each kept for 25 s of playback (and at most 15 min of mission time) after it was said
+    for (var j = i; j >= 0 && shown.length < 3; j--) { if (p - getToPlay(TRG[j]) <= 25 && g - TRG[j] <= 900) shown.unshift(TR.lines[j]); else break; }
+    var key = shown.map(function (l) { return l.get; }).join(",");
+    if (key === voiceKey) return;
+    voiceKey = key;
+    var V = $("voice");
+    if (!shown.length) {
+      V.innerHTML = '<div class="empty">Voice loop: the crew\'s and Mission Control\'s words appear here at the moment they were spoken, from the NASA transcripts (<a href="' + TR.sources["alsj-landing"] + '" target="_blank" rel="noopener">Apollo Lunar Surface Journal</a> and Apollo Flight Journal).</div>';
+      return;
+    }
+    V.innerHTML = shown.map(function (l, k) {
+      var cls = k === shown.length - 1 ? "now" : k === 0 && shown.length === 3 ? "old" : "";
+      var role = /CAPCOM|Hornet|Swim/.test(l.who) ? "capcom" : "crew";
+      var src = cls === "now" ? ' <a class="src" href="' + TR.sources[l.src] + '" target="_blank" rel="noopener">source</a>' : "";
+      return '<div class="vl ' + cls + '"><span class="vt">' + fmtGET(l.get) + '</span><span class="vw ' + role + '">' + esc(l.who) + '</span><span class="vx">' + esc(l.text) + (l.kind === "onboard" ? '<span class="ob">onboard recorder</span>' : "") + src + "</span></div>";
+    }).join("");
+  }
 
   // ---------- canvas ----------
   var canvas = $("scope"), ctx = canvas.getContext("2d");
@@ -1093,6 +1130,7 @@ button, select, input { font: inherit; color: inherit; }
       Array.prototype.forEach.call(bands.children, function (b, i) { b.classList.toggle("cur", i === pi); });
     }
     $("event").innerHTML = ev ? "<b>" + esc(ev.short) + "</b> " + fmtGET(ev.get) + " · " + esc(ev.label) : "";
+    updateVoice(g, state.play);
     var codeComp = D.code.filter(function (c) { return g >= c.get_start && g < c.get_end; })[0];
     var active = codeComp ? codeComp.computer : ph.active_computer;
     if (active !== autoDsky) { autoDsky = active; if (window.innerWidth <= 700) showDsky(active); }

@@ -772,11 +772,26 @@ def build_data():
         events=[dict(id=i, get=g, label=lab, short=sh, computer=c, detail=d) for i, g, lab, sh, c, d in EVENTS],
         phases=phases, timemap=timemap, tracks=tracks, dsky=dsky, lm_power=[[LM_ON, LM_OFF]],
         code=code_steps(burn_dur),
+        transcript=load_transcript(),
     )
     return data
 
 
+def load_transcript():
+    """Verbatim crew and Mission Control lines with their GET (see transcript.json)."""
+    t = json.loads((LIVE / "transcript.json").read_text(encoding="utf-8"))
+    lines = []
+    for stamp, who, text, kind, src in t["lines"]:
+        h, m, sec = (int(x) for x in stamp.split(":"))
+        if src not in t["sources"] or kind not in ("air", "onboard"):
+            raise SystemExit(f"build.py: bad transcript line at {stamp}")
+        lines.append(dict(get=get(h, m, sec), who=who, text=text, kind=kind, src=src))
+    return dict(note=t["note"], sources=t["sources"], lines=lines)
+
+
 def validate(d):
+    tl = [x["get"] for x in d["transcript"]["lines"]]
+    assert tl == sorted(tl) and tl[0] >= 0 and tl[-1] <= END, "transcript out of order or outside the mission"
     ev = [e["get"] for e in d["events"]]
     assert ev == sorted(ev), "events out of order"
     ph = d["phases"]
