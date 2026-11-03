@@ -3,6 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apollo 11 Live: mission replay with the guidance computer code</title>
+<meta name="description" content="Replay Apollo 11 from launch to splashdown: the trajectory, Columbia&#x27;s and Eagle&#x27;s DSKYs, the AGC source code that was running, and the crew&#x27;s real voices.">
+<link rel="canonical" href="https://martha889.github.io/apollo-11-explained/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Apollo 11 Explained">
+<meta property="og:title" content="Apollo 11 Live: mission replay with the guidance computer code">
+<meta property="og:description" content="Replay Apollo 11 from launch to splashdown: the trajectory, Columbia&#x27;s and Eagle&#x27;s DSKYs, the AGC source code that was running, and the crew&#x27;s real voices.">
+<meta property="og:url" content="https://martha889.github.io/apollo-11-explained/">
+<meta property="og:image" content="https://martha889.github.io/apollo-11-explained/screenshot.png">
+<meta property="og:image:alt" content="Apollo 11 Live: trajectory, the two DSKYs, and the AGC code running during the 1202 alarm">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Apollo 11 Live: mission replay with the guidance computer code">
+<meta name="twitter:description" content="Replay Apollo 11 from launch to splashdown: the trajectory, Columbia&#x27;s and Eagle&#x27;s DSKYs, the AGC source code that was running, and the crew&#x27;s real voices.">
+<meta name="twitter:image" content="https://martha889.github.io/apollo-11-explained/screenshot.png">
+<meta name="theme-color" content="#0d121b">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Apollo 11 Live: mission replay with the guidance computer code",
+  "url": "https://martha889.github.io/apollo-11-explained/",
+  "description": "Replay Apollo 11 from launch to splashdown: the trajectory, Columbia's and Eagle's DSKYs, the AGC source code that was running, and the crew's real voices.",
+  "applicationCategory": "EducationalApplication",
+  "operatingSystem": "Any (web browser)",
+  "isAccessibleForFree": true,
+  "license": "https://opensource.org/licenses/MIT",
+  "author": {
+    "@type": "Person",
+    "name": "Sarthak Choudhary"
+  },
+  "about": [
+    "Apollo 11",
+    "Apollo Guidance Computer"
+  ]
+}
+</script>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -1214,26 +1250,53 @@ button, select, input { font: inherit; color: inherit; }
   var W = 0, H = 0, DPR = 1;
   function resize() {
     var r = $("canvas-wrap").getBoundingClientRect();
-    DPR = Math.min(2, window.devicePixelRatio || 1);
+    DPR = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     W = Math.max(1, r.width); H = Math.max(1, r.height);
     canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     state.dirty = true;
   }
-  if (window.ResizeObserver) new ResizeObserver(resize).observe($("canvas-wrap")); else window.addEventListener("resize", resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe($("canvas-wrap"));
+  window.addEventListener("resize", resize);
+  if (window.matchMedia) {
+    try {
+      window.matchMedia("screen and (min-resolution: 2dppx)").addEventListener("change", resize);
+    } catch (e) {}
+  }
   resize();
 
-  var view = null, viewScene = null;
+  var view = null, viewScene = null, viewMoving = false;
   function smooth(target, scene, dt) {
-    if (!view || viewScene !== scene || reduceMotion) { view = Object.assign({}, target); viewScene = scene; return view; }
+    if (!view || viewScene !== scene || reduceMotion) {
+      view = Object.assign({}, target);
+      viewScene = scene;
+      viewMoving = false;
+      return view;
+    }
     var a = 1 - Math.exp(-dt * 3.5);
-    for (var k in target) view[k] += (target[k] - view[k]) * a;
+    var moved = false;
+    for (var k in target) {
+      var diff = target[k] - view[k];
+      if (Math.abs(diff) > 1e-4) {
+        view[k] += diff * a;
+        moved = true;
+      } else {
+        view[k] = target[k];
+      }
+    }
+    viewMoving = moved;
     return view;
   }
 
   var STARS = (function () { var s = [], seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; } for (var i = 0; i < 160; i++) s.push([rnd(), rnd(), rnd()]); return s; })();
   function drawStars() {
     ctx.fillStyle = C.fg;
-    STARS.forEach(function (s) { ctx.globalAlpha = 0.12 + s[2] * 0.3; ctx.fillRect(s[0] * W, s[1] * H, s[2] > 0.85 ? 1.6 : 1, s[2] > 0.85 ? 1.6 : 1); });
+    STARS.forEach(function (s) {
+      ctx.globalAlpha = 0.12 + s[2] * 0.3;
+      var sz = s[2] > 0.85 ? 1.5 : 1;
+      ctx.fillRect(Math.round(s[0] * W), Math.round(s[1] * H), sz, sz);
+    });
     ctx.globalAlpha = 1;
   }
   function text(t, x, y, opt) {
@@ -1242,30 +1305,42 @@ button, select, input { font: inherit; color: inherit; }
     ctx.fillStyle = opt.color || C.muted;
     ctx.textAlign = opt.align || "left";
     ctx.textBaseline = opt.base || "alphabetic";
-    ctx.fillText(t, x, y);
+    ctx.fillText(t, Math.round(x), Math.round(y));
   }
   function label(t, x, y, color, align) {
     text(t, x, y, { size: 12, weight: 600, color: color, font: "Barlow Condensed, Arial Narrow, sans-serif", align: align || "left" });
   }
   function marker(x, y, color, name, opts) {
     opts = opts || {};
-    ctx.beginPath(); ctx.arc(x, y, 9, 0, Math.PI * 2); ctx.fillStyle = color; ctx.globalAlpha = 0.18; ctx.fill(); ctx.globalAlpha = 1;
-    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+    var mx = Math.round(x), my = Math.round(y);
+    ctx.beginPath(); ctx.arc(mx, my, 9, 0, Math.PI * 2); ctx.fillStyle = color; ctx.globalAlpha = 0.18; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(mx, my, 4, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
     ctx.lineWidth = 1.5; ctx.strokeStyle = C.bg; ctx.stroke();
-    if (name) label(name.toUpperCase(), x + (opts.dx || 10), y + (opts.dy || -10), color, opts.align);
+    if (name) label(name.toUpperCase(), mx + (opts.dx || 10), my + (opts.dy || -10), color, opts.align);
   }
   function plume(x, y, ang, color) { // short flame behind the craft, pointing opposite to the thrust
     ctx.save(); ctx.translate(x, y); ctx.rotate(ang);
     ctx.beginPath(); ctx.moveTo(-6, -3.5); ctx.lineTo(-22 - Math.random() * 6, 0); ctx.lineTo(-6, 3.5); ctx.closePath();
     ctx.fillStyle = color; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1; ctx.restore();
   }
-  function polyline(xs, ys, X, Y, i0, i1, color, width, dash, alpha) {
-    if (i1 <= i0) return;
+  function polyline(xs, ys, X, Y, i0, i1, color, width, dash, alpha, endPt) {
+    if (i1 < i0 && !endPt) return;
     ctx.beginPath();
-    ctx.moveTo(X(xs[i0]), Y(ys[i0]));
-    for (var i = i0 + 1; i <= i1; i++) ctx.lineTo(X(xs[i]), Y(ys[i]));
+    var started = false;
+    if (i1 >= i0) {
+      ctx.moveTo(X(xs[i0]), Y(ys[i0]));
+      for (var i = i0 + 1; i <= i1; i++) ctx.lineTo(X(xs[i]), Y(ys[i]));
+      started = true;
+    }
+    if (endPt) {
+      if (!started) ctx.moveTo(endPt[0], endPt[1]);
+      else ctx.lineTo(endPt[0], endPt[1]);
+    }
     ctx.strokeStyle = color; ctx.lineWidth = width || 2; ctx.setLineDash(dash || []); ctx.globalAlpha = alpha == null ? 1 : alpha;
-    ctx.lineJoin = "round"; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = dash && dash.length ? "butt" : "round";
+    ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
   }
   function niceStep(range, n) {
     var raw = range / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), r = raw / mag;
@@ -1315,11 +1390,12 @@ button, select, input { font: inherit; color: inherit; }
   function scaleBar(kmPerPx) {
     var target = 110 * kmPerPx, p = Math.pow(10, Math.floor(Math.log10(target))), r = target / p;
     var km = (r < 2 ? 1 : r < 5 ? 2 : 5) * p, px = km / kmPerPx;
-    var x = 14, y = H - 16;
+    var x = 14, y = Math.round(H - 16), rx = Math.round(x + px);
     ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y); ctx.lineTo(x + px, y); ctx.lineTo(x + px, y - 4); ctx.stroke();
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y); ctx.lineTo(rx, y); ctx.lineTo(rx, y - 4); ctx.stroke();
     var lbl = km < 1 ? Math.round(km * 1000) + " m" : km.toLocaleString("en-US") + " km";
-    text(lbl, x + px + 8, y + 1, { size: 11, font: "IBM Plex Mono, monospace", weight: 400 });
+    text(lbl, rx + 8, y + 1, { size: 11, font: "IBM Plex Mono, monospace", weight: 400 });
   }
   function body(x, y, rpx, color, name) {
     rpx = Math.max(rpx, 2.5);
@@ -1348,9 +1424,9 @@ button, select, input { font: inherit; color: inherit; }
     var v = smooth({ x0: -40, x1: 2800, y0: 0, y1: 200 }, "launch", dt);
     var c = chart(v, tr.x_label, tr.y_label);
     var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y], ["v", tr.v]], g);
-    polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.csm, 1, [4, 5], 0.35);
-    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.csm, 2.2);
     var px = c.X(s.x), py = c.Y(s.y);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.csm, 1, [4, 5], 0.35);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.csm, 2.2, null, 1, [px, py]);
     if (g < tr.get[tr.get.length - 1]) plume(px, py, Math.atan2(c.Y(tr.y[Math.min(s.i + 1, tr.y.length - 1)]) - py, c.X(tr.x[Math.min(s.i + 1, tr.x.length - 1)]) - px), C.amber);
     marker(px, py, C.csm, g < 709 ? "Saturn V" : "Columbia + S-IVB");
     c.done();
@@ -1366,9 +1442,9 @@ button, select, input { font: inherit; color: inherit; }
     var M = mapXf(v);
     drawStars();
     body(M.X(0), M.Y(0), 6378 * M.s, C.earth, "Earth");
-    polyline(tr.x, tr.y, M.X, M.Y, 0, s.i, C.csm, 2);
-    var b = burnActive(tr.burns, g);
     var px = M.X(s.x), py = M.Y(s.y);
+    polyline(tr.x, tr.y, M.X, M.Y, 0, s.i, C.csm, 2, null, 1, [px, py]);
+    var b = burnActive(tr.burns, g);
     if (b) { var j = Math.min(s.i + 1, tr.x.length - 1); plume(px, py, Math.atan2(M.Y(tr.y[j]) - py, M.X(tr.x[j]) - px), C.amber); }
     marker(px, py, C.csm, g < EV["docking-lm"].get ? "Columbia + S-IVB" : "Columbia + Eagle");
     note(tr.note);
@@ -1391,15 +1467,15 @@ button, select, input { font: inherit; color: inherit; }
     drawStars();
     body(M.X(0), M.Y(0), tr.r_earth * M.s, C.earth, "Earth");
     body(M.X(tr.moon[0]), M.Y(0), tr.r_moon * M.s, C.moon, "Moon");
+    var px = M.X(s.x), py = M.Y(s.y);
     if (leg === out) {
       polyline(out.x, out.y, M.X, M.Y, s.i, out.x.length - 1, C.csm, 1, [4, 6], 0.4);
-      polyline(out.x, out.y, M.X, M.Y, 0, s.i, C.csm, 2);
+      polyline(out.x, out.y, M.X, M.Y, 0, s.i, C.csm, 2, null, 1, [px, py]);
     } else {
       polyline(out.x, out.y, M.X, M.Y, 0, out.x.length - 1, C.csm, 1, null, 0.25);
       polyline(ret.x, ret.y, M.X, M.Y, s.i, ret.x.length - 1, C.csm, 1, [4, 6], 0.4);
-      polyline(ret.x, ret.y, M.X, M.Y, 0, s.i, C.csm, 2);
+      polyline(ret.x, ret.y, M.X, M.Y, 0, s.i, C.csm, 2, null, 1, [px, py]);
     }
-    var px = M.X(s.x), py = M.Y(s.y);
     if (Math.abs(g - EV["mcc-2"].get) < 5 || Math.abs(g - EV["mcc-5"].get) < 12) plume(px, py, 0, C.amber);
     marker(px, py, C.csm, leg === out ? "Columbia + Eagle" : "Columbia");
     note(tr.note);
@@ -1486,12 +1562,16 @@ button, select, input { font: inherit; color: inherit; }
     var tgt = s.y > 2.6 ? { x0: -460, x1: 12, y0: 0, y1: 16 } : s.y > 0.25 ? { x0: -9, x1: 0.6, y0: 0, y1: 2.4 } : { x0: -1.6, x1: 0.15, y0: 0, y1: 0.26 };
     var v = smooth(tgt, "descent", dt);
     var c = chart(v, tr.x_label, tr.y_label);
+    var px = c.X(s.x), py = c.Y(s.y);
     // ground and site
     ctx.fillStyle = C["panel-2"]; ctx.fillRect(c.m.l, c.Y(0), c.pw, 4000);
     polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.lm, 1, [4, 5], 0.3);
     var start = 0;
     for (var i = 1; i <= s.i; i++) {
-      if (tr.phase[i] !== tr.phase[start] || i === s.i) { polyline(tr.x, tr.y, c.X, c.Y, start, i, C[PHC[tr.phase[start]]], 2.4); start = i; }
+      if (tr.phase[i] !== tr.phase[start] || i === s.i) {
+        polyline(tr.x, tr.y, c.X, c.Y, start, i, C[PHC[tr.phase[start]]], 2.4, null, 1, i === s.i ? [px, py] : null);
+        start = i;
+      }
     }
     // events on the path
     [["alarm-1202", "1202", C.alarm], ["p64", "P64", C.p64], ["alarm-1201", "1201", C.alarm], ["p66", "P66", C.p66]].forEach(function (e) {
@@ -1503,7 +1583,6 @@ button, select, input { font: inherit; color: inherit; }
     });
     ctx.beginPath(); ctx.moveTo(c.X(0), c.Y(0)); ctx.lineTo(c.X(0), c.Y(0) - 18); ctx.strokeStyle = C.amber; ctx.lineWidth = 1.5; ctx.stroke();
     ctx.fillStyle = C.amber; ctx.fillRect(c.X(0), c.Y(0) - 18, 9, 6);
-    var px = c.X(s.x), py = c.Y(s.y);
     // LM attitude glyph: thrust axis tilted by pitch from vertical
     var landed = g >= EV.touchdown.get;
     var ang = (landed ? 0 : s.p) * Math.PI / 180;
@@ -1565,10 +1644,10 @@ button, select, input { font: inherit; color: inherit; }
     var s = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y], ["p", tr.pitch_deg]], g);
     var v = smooth({ x0: -8, x1: 310, y0: 0, y1: 22 }, "ascent", dt);
     var c = chart(v, tr.x_label, tr.y_label);
+    var px = c.X(s.x), py = c.Y(s.y);
     ctx.fillStyle = C["panel-2"]; ctx.fillRect(c.m.l, c.Y(0), c.pw, 4000);
     polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.lm, 1, [4, 5], 0.35);
-    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.lm, 2.2);
-    var px = c.X(s.x), py = c.Y(s.y);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.lm, 2.2, null, 1, [px, py]);
     var burning = g >= tr.get[0] && g < tr.get[tr.get.length - 1];
     if (burning) { var j = Math.min(s.i + 1, tr.x.length - 1); plume(px, py, Math.atan2(c.Y(tr.y[j]) - py, c.X(tr.x[j]) - px), C.amber); }
     marker(px, py, C.lm, "Eagle");
@@ -1653,6 +1732,8 @@ button, select, input { font: inherit; color: inherit; }
     ctx.strokeStyle = C.lm;
     ctx.globalAlpha = 0.3;
     ctx.lineWidth = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "butt";
     for (var pi = 0; pi < tr.x.length; pi++) {
       var px = w2sX(tr.x[pi] * 1000), py = w2sY(tr.z[pi] * 1000);
       if (pi === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
@@ -1664,6 +1745,8 @@ button, select, input { font: inherit; color: inherit; }
     ctx.strokeStyle = C.lm;
     ctx.globalAlpha = 0.3 + 0.7 * Math.min(1, range / 1000); // fades in the close-up so it doesn't read as a tether
     ctx.lineWidth = 2;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     var maxI = Math.min(s.i, tr.x.length - 1);
     for (var fi = 0; fi <= maxI; fi++) {
       var fx = w2sX(tr.x[fi] * 1000), fy = w2sY(tr.z[fi] * 1000);
@@ -1767,6 +1850,23 @@ button, select, input { font: inherit; color: inherit; }
     ctx.moveTo(-0.35, -3.3); ctx.lineTo(0.35, -3.3); ctx.lineTo(0.6, -3.7); ctx.lineTo(-0.6, -3.7); ctx.closePath();
     ctx.fillStyle = shade(C.lm, 0.5); ctx.fill();
     ctx.strokeStyle = C.lm; ctx.lineWidth = 1.2 / gs; ctx.stroke();
+    // Burn plume on Eagle's engine for 40s after CSI, CDH, TPI, MCC 2
+    if (g < EV.docking.get) {
+      for (var bi = 0; bi < tr.burns.length; bi++) {
+        var bb = tr.burns[bi];
+        if (bb.id !== "braking" && g >= bb.get && g < bb.get + 40) {
+          ctx.beginPath();
+          ctx.moveTo(-0.4, -3.7);
+          ctx.lineTo(0, -3.7 - (14 + Math.random() * 6) / gs);
+          ctx.lineTo(0.4, -3.7);
+          ctx.closePath();
+          ctx.fillStyle = C.amber;
+          ctx.globalAlpha = 0.85;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
     // Intermittent amber RCS puff toward Columbia during braking
     if (g < EV.docking.get && g >= tr.brake && g < tr.brake_end && Math.floor(g / 25) % 3 !== 0) {
       ctx.beginPath();
@@ -1774,18 +1874,6 @@ button, select, input { font: inherit; color: inherit; }
       ctx.fillStyle = C.amber; ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
     }
     ctx.restore();
-
-    // Burn plume on Eagle's aft for 40s after CSI, CDH, TPI, MCC 2
-    if (g < EV.docking.get) {
-      for (var bi = 0; bi < tr.burns.length; bi++) {
-        var bb = tr.burns[bi];
-        if (bb.id !== "braking" && g >= bb.get && g < bb.get + 40) {
-          var aftDx = -2.15 * Math.cos(eagleWorldAngle) + 1.9 * Math.sin(eagleWorldAngle);
-          var aftDz = -2.15 * Math.sin(eagleWorldAngle) - 1.9 * Math.cos(eagleWorldAngle);
-          plume(w2sX(apex_x + aftDx), w2sY(apex_z + aftDz), -eagleWorldAngle, C.amber);
-        }
-      }
-    }
 
     // Docking interface flash ring for 20s
     if (g >= EV.docking.get && g < EV.docking.get + 20) {
@@ -1906,9 +1994,10 @@ button, select, input { font: inherit; color: inherit; }
     if (g < EV["entry-interface"].get) tgt = { x0: -40, x1: 2400, y0: 0, y1: 130 };
     var v = smooth(tgt, "entry", dt);
     var c = chart(v, tr.x_label, tr.y_label);
+    var px = c.X(s.x), py = c.Y(s.y);
     ctx.fillStyle = C["panel-2"]; ctx.fillRect(c.m.l, c.Y(0), c.pw, 4000);
     polyline(tr.x, tr.y, c.X, c.Y, 0, tr.x.length - 1, C.csm, 1, [4, 5], 0.3);
-    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.csm, 2.2);
+    polyline(tr.x, tr.y, c.X, c.Y, 0, s.i, C.csm, 2.2, null, 1, [px, py]);
     tr.transitions.forEach(function (t) {
       if (g < t.get) return;
       var q = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], t.get);
@@ -1918,7 +2007,7 @@ button, select, input { font: inherit; color: inherit; }
     ctx.fillStyle = C.amber; ctx.fillRect(c.X(tr.target_km) - 1, c.Y(0) - 14, 2, 14);
     label("TARGET", c.X(tr.target_km), c.Y(0) - 18, C.amber, "center");
     var pre = g < EV["entry-interface"].get;
-    if (!pre) marker(c.X(s.x), c.Y(s.y), C.csm, g >= EV.splashdown.get ? "Splashdown" : "Columbia");
+    if (!pre) marker(px, py, C.csm, g >= EV.splashdown.get ? "Splashdown" : "Columbia");
     c.done();
     note(tr.note);
     var prog = "P63"; tr.transitions.forEach(function (t) { if (g >= t.get) prog = t.program; });
@@ -1955,7 +2044,7 @@ button, select, input { font: inherit; color: inherit; }
   jump.addEventListener("change", function () { if (jump.value) { seekEvent(jump.value, true); jump.value = ""; } });
   var scrub = $("scrub");
   scrub.max = TOTAL;
-  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); state.dirty = true; voiceSeeked(); });
+  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); view = null; state.dirty = true; voiceSeeked(); });
 
   function setPlaying(p) {
     state.playing = p && state.play < TOTAL;
@@ -1968,6 +2057,7 @@ button, select, input { font: inherit; color: inherit; }
   function seekEvent(id, keepPlaying) {
     var e = EV[id]; if (!e) return;
     state.play = Math.min(TOTAL, getToPlay(e.get) + 0.002);
+    view = null;
     voiceSeeked();
     state.lastEvent = e; state.dirty = true;
     showToast(e);
@@ -2059,12 +2149,15 @@ button, select, input { font: inherit; color: inherit; }
     var pct = state.play / TOTAL * 100;
     $("progress").style.left = "calc(" + pct + "% - 1px)";
     if (document.activeElement !== scrub) scrub.value = state.play;
-    if (state.dirty || state.playing || (view && viewScene === ph.scene && Math.abs(dt) > 0)) {
+    if (state.dirty || state.playing || viewMoving) {
       if (ph.scene !== lastScene) { lastScene = ph.scene; $("scene-title").textContent = SCENE_TITLE[ph.scene]; $("scene-frame").textContent = SCENE_FRAME[ph.scene]; }
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      ctx.save();
+      var sx = canvas.width / W, sy = canvas.height / H;
+      ctx.setTransform(sx, 0, 0, sy, 0, 0);
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = C.panel; ctx.fillRect(0, 0, W, H);
       try { SCENES[ph.scene](g, dt); } catch (err) { text("Drawing error: " + err.message, 14, 20, { color: C.alarm }); if (window.console) console.error(err); }
+      ctx.restore();
       state.dirty = false;
     }
     requestAnimationFrame(frame);
