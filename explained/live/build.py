@@ -16,6 +16,7 @@ piecewise-linearly onto the real GET; the page says so wherever that happens.
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import inspect
 import io
@@ -804,6 +805,57 @@ def validate(d):
         assert a["get_end"] == b["get_start"] and a["get_start"] < a["get_end"], (a["id"], b["id"])
 
 
+FONTS_DIR = LIVE / "fonts"
+
+EXPECTED_FONTS = [
+    ("barlow-condensed-500.woff2", "Barlow Condensed", 500),
+    ("barlow-condensed-600.woff2", "Barlow Condensed", 600),
+    ("barlow-condensed-700.woff2", "Barlow Condensed", 700),
+    ("ibm-plex-mono-400.woff2", "IBM Plex Mono", 400),
+    ("ibm-plex-mono-500.woff2", "IBM Plex Mono", 500),
+    ("ibm-plex-mono-600.woff2", "IBM Plex Mono", 600),
+    ("ibm-plex-sans-400-600.woff2", "IBM Plex Sans", "400 600"),  # one variable font
+]
+
+UNICODE_RANGE = (
+    "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, "
+    "U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, "
+    "U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"
+)
+
+
+def bundle_fonts(template: str) -> str:
+    placeholder = "/*__FONTS__*/"
+    if placeholder not in template:
+        raise ValueError(f"Missing font placeholder {placeholder!r} in template")
+
+    missing = [name for name, _, _ in EXPECTED_FONTS if not (FONTS_DIR / name).is_file()]
+    if missing:
+        raise FileNotFoundError(f"Missing required font files: {missing}")
+
+    rules = []
+    font_files = sorted(FONTS_DIR.glob("*.woff2"))
+    if len(font_files) != len(EXPECTED_FONTS):
+        raise FileNotFoundError(f"Expected {len(EXPECTED_FONTS)} font files, found {len(font_files)} in {FONTS_DIR}")
+
+    for name, family, weight in EXPECTED_FONTS:
+        font_path = FONTS_DIR / name
+        b64_data = base64.b64encode(font_path.read_bytes()).decode("ascii")
+        rule = (
+            "@font-face {\n"
+            f'  font-family: "{family}";\n'
+            "  font-style: normal;\n"
+            f"  font-weight: {weight};\n"
+            "  font-display: swap;\n"
+            f'  src: url(data:font/woff2;base64,{b64_data}) format("woff2");\n'
+            f"  unicode-range: {UNICODE_RANGE};\n"
+            "}"
+        )
+        rules.append(rule)
+
+    return template.replace(placeholder, "\n".join(rules))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--fragment", metavar="PATH", help="also write the page without the html/head/body wrapper")
@@ -813,7 +865,8 @@ def main(argv=None):
     data = build_data()
     validate(data)
     blob = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
-    frag = (LIVE / "template.html").read_text(encoding="utf-8").replace("__MISSION_DATA__", blob)
+    tpl = (LIVE / "template.html").read_text(encoding="utf-8")
+    frag = bundle_fonts(tpl).replace("__MISSION_DATA__", blob)
     full = ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
             "<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}"
