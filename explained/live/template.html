@@ -1501,6 +1501,27 @@ button, select, input { font: inherit; color: inherit; }
     readout([["Program", landed ? "P68" : "P" + ph, C[PHC[ph]]], ["Altitude", s.y >= 1 ? s.y.toFixed(2) + " km" : Math.round(s.y * 1000) + " m"], ["Sink rate", (landed ? 0 : -s.vv).toFixed(1) + " m/s"], ["Throttle", landed ? "off" : Math.round(s.th * 100) + " %"], ["To site", Math.abs(s.x) >= 1 ? Math.abs(s.x).toFixed(1) + " km" : Math.round(Math.abs(s.x) * 1000) + " m"]]);
   };
 
+  // The US flag (13 stripes, 50 stars in rows of 6 and 5), drawn once per size into an offscreen canvas.
+  function usFlag(w, h) {
+    var key = w.toFixed(2) + "x" + h.toFixed(2) + "@" + DPR;
+    if (usFlag.key === key) return usFlag.canvas;
+    var c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * DPR)); c.height = Math.max(1, Math.round(h * DPR));
+    var x = c.getContext("2d"), red = "#b22234", white = "#f4f3ee", blue = "#3c3b6e";
+    x.scale(c.width / w, c.height / h);
+    var sh = h / 13, cw = w * 0.4, ch = sh * 7;
+    for (var i = 0; i < 13; i++) { x.fillStyle = i % 2 ? white : red; x.fillRect(0, i * sh, w, sh + 0.05); }
+    x.fillStyle = blue; x.fillRect(0, 0, cw, ch);
+    x.fillStyle = white;
+    for (var row = 0; row < 9; row++) {
+      for (var col = row % 2 ? 2 : 1; col <= 11; col += 2) {
+        x.beginPath(); x.arc(col * cw / 12, (row + 1) * ch / 10, Math.max(0.3, ch / 34), 0, Math.PI * 2); x.fill();
+      }
+    }
+    usFlag.key = key; usFlag.canvas = c;
+    return c;
+  }
+
   SCENES.surface = function (g, dt) {
     var tr = T.surface;
     // sky + Earth
@@ -1532,7 +1553,15 @@ button, select, input { font: inherit; color: inherit; }
       });
     }
     if (g >= 395520 && !up) { // flag planted ~109:52 GET; blown over at liftoff
-      ctx.fillStyle = C.fg; ctx.fillRect(lx + 160 * s, gy - 52 * s, 1.5 * s, 52 * s); ctx.fillStyle = C.alarm; ctx.globalAlpha = 0.8; ctx.fillRect(lx + 161.5 * s, gy - 52 * s, 20 * s, 12 * s); ctx.globalAlpha = 1;
+      var fx = lx + 161.5 * s, fy = gy - 51 * s, fw = 30 * s, fh = 16 * s, img = usFlag(fw, fh);
+      ctx.fillStyle = C.fg; ctx.fillRect(lx + 160 * s, gy - 53 * s, 1.5 * s, 53 * s); // pole
+      // There's no air to fly it, so a rod along the top held it out; it never fully extended,
+      // which left the flag with a frozen ripple.
+      for (var fi = 0; fi < fw; fi++) {
+        var dy = Math.sin(fi / fw * Math.PI * 3) * fh * 0.05 * (fi / fw);
+        ctx.drawImage(img, fi / fw * img.width, 0, img.width / fw, img.height, fx + fi, fy + dy, 1, fh);
+      }
+      ctx.fillRect(fx, fy - 0.9 * s, fw * 0.96, 0.9 * s); // crossbar
     }
     var on = g - EV.touchdown.get;
     text("TRANQUILITY BASE", 14, 26, { font: "Barlow Condensed, Arial Narrow, sans-serif", size: 22, weight: 700, color: C.fg });
