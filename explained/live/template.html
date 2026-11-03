@@ -1008,32 +1008,98 @@ button, select, input { font: inherit; color: inherit; }
   $("tab-py").addEventListener("click", function () { setTab("py"); });
 
   // ---------- real voices (NASA recordings, see audio/clips.json) ----------
-  var voice = { on: true, el: null, line: null, hold: false, blocked: false, lastG: null };
+  // Every line the playing clock passes is queued and played in order; the
+  // mission clock holds until the queue is empty, so no recording is skipped,
+  // however fast the clock runs or however many lines one frame crosses.
+  var voice = { on: true, queue: [], el: null, line: null, blocked: false, lastG: null, manual: false };
   try { if (localStorage.getItem("a11-sound") === "off") voice.on = false; } catch (e) {}
+  function voiceHolding() { return voice.on && (voice.el !== null || voice.queue.length > 0); }
   function stopVoice() {
     if (voice.el) { try { voice.el.pause(); } catch (e) {} }
-    voice.el = null; voice.line = null; voice.hold = false; voiceKey = null;
+    if (typeof guard !== "undefined") clearTimeout(guard);
+    voice.el = null; voice.line = null; voice.queue = []; voice.manual = false; voiceKey = null;
   }
-  function playLine(l, hold) {
-    stopVoice();
-    if (!l || !l.audio) return;
-    var a = new Audio(l.audio);
-    voice.el = a; voice.line = l; voice.hold = !!hold;
-    var done = function () { if (voice.el === a) { voice.el = null; voice.line = null; voice.hold = false; voiceKey = null; } };
-    a.addEventListener("ended", done);
-    a.addEventListener("error", done);
-    var pr = a.play();
-    if (pr && pr.catch) pr.catch(function () { done(); voice.blocked = true; voiceKey = null; });
-    else voice.blocked = false;
-    if (pr && pr.then) pr.then(function () { voice.blocked = false; voiceKey = null; });
-    voiceKey = null;
+  // After a seek or jump, lines from 2 s before the new position count as "not yet heard",
+  // so jumping to an event that starts with a line (e.g. Contact Light at touchdown) plays it.
+  function voiceSeeked() { stopVoice(); voice.lastG = playToGet(state.play) - 2; }
+  // One shared audio element: browsers (Safari especially) only let a page play
+  // sound on an element that was first started from a click or key press, so it
+  // is unlocked on the first interaction and reused for every clip.
+  var player = new Audio();
+  player.preload = "auto";
+  var SILENT = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+  var unlocked = false;
+  function unlockAudio() {
+    if (unlocked) return;
+    unlocked = true;
+    if (voice.el) return;
+    try { player.src = SILENT; var pr = player.play(); if (pr && pr.catch) pr.catch(function () { unlocked = false; }); } catch (e) { unlocked = false; }
   }
-  // Called every frame: start the clip of any line the playing clock has just crossed.
+  document.addEventListener("pointerdown", unlockAudio, true);
+  document.addEventListener("keydown", unlockAudio, true);
+  var guard = null;
+  function armGuard() {
+    clearTimeout(guard);
+    if (!voice.line) return;
+    var left = (voice.line.dur || 10) - (player.currentTime || 0);
+    guard = setTimeout(clipDone, (Math.max(0, left) + 5) * 1000); // in case the end is never reported
+  }
+  function clipDone() {
+    clearTimeout(guard);
+    if (!voice.el) return;
+    voice.el = null; voice.line = null; voice.manual = false; voiceKey = null;
+    nextClip();
+  }
+  player.addEventListener("ended", function () { if (voice.el) clipDone(); });
+  player.addEventListener("error", function () { if (voice.el && player.src.indexOf("data:") !== 0) clipDone(); });
+  player.addEventListener("playing", armGuard);
+  player.addEventListener("pause", function () { clearTimeout(guard); });
+  function startClip(l, manual) {
+    voice.el = player; voice.line = l; voice.manual = !!manual; voiceKey = null;
+    player.src = l.audio;
+    var pr = player.play();
+    if (pr && pr.then) {
+      pr.then(function () { voice.blocked = false; voiceKey = null; }, function (err) {
+        if (voice.line !== l) return;
+        clearTimeout(guard);
+        voice.el = null; voice.line = null; voiceKey = null;
+        if (err && err.name === "NotAllowedError") {
+          // The browser wants a click before it plays sound: keep the line queued
+          // and pause the mission so nothing is missed.
+          voice.queue.unshift(l);
+          voice.blocked = true;
+          unlocked = false;
+          setPlaying(false);
+        } else if (err && err.name === "AbortError") {
+          // superseded by another clip or a seek: nothing to do
+        } else {
+          nextClip();
+        }
+      });
+    }
+  }
+  function nextClip() {
+    if (voice.el || !voice.queue.length || !voice.on) return;
+    if (!state.playing && !voice.manual) return; // resumes when Play is pressed
+    startClip(voice.queue.shift(), false);
+  }
+  // Called every frame.
   function voiceTick(g) {
-    var prev = voice.lastG; voice.lastG = g;
-    if (!voice.on || !state.playing || prev === null || g <= prev || g - prev > 600) return;
-    var i = bsearch(TRG, g);
-    if (i >= 0 && TRG[i] > prev && TR.lines[i].audio) playLine(TR.lines[i], true);
+    // Only advance the "heard up to here" mark while playing, so a jump made while
+    // paused still plays the lines at the new position once Play is pressed.
+    if (!state.playing) { if (voice.lastG === null) voice.lastG = g; return; }
+    var prev = voice.lastG;
+    voice.lastG = g;
+    if (!voice.on) return;
+    if (state.playing && voice.el && voice.el.paused && !voice.blocked) {
+      var pr = voice.el.play(); if (pr && pr.catch) pr.catch(function () {});
+    }
+    if (state.playing && prev !== null && g > prev) {
+      for (var j = bsearch(TRG, prev) + 1; j < TRG.length && TRG[j] <= g; j++) {
+        if (TR.lines[j].audio && voice.queue.indexOf(TR.lines[j]) < 0 && voice.line !== TR.lines[j]) voice.queue.push(TR.lines[j]);
+      }
+    }
+    if (state.playing) { voice.blocked = false; nextClip(); }
   }
   function setSound(on) {
     voice.on = on;
@@ -1050,7 +1116,10 @@ button, select, input { font: inherit; color: inherit; }
     var b = e.target.closest && e.target.closest(".vplay");
     if (!b) return;
     var l = TR.lines[parseInt(b.getAttribute("data-i"), 10)];
-    if (voice.line === l) stopVoice(); else playLine(l, false);
+    if (voice.line === l) { stopVoice(); return; }
+    stopVoice();
+    voice.blocked = false;
+    startClip(l, true);
   });
 
   // ---------- voice loop (verbatim transcript lines) ----------
@@ -1074,7 +1143,7 @@ button, select, input { font: inherit; color: inherit; }
       var btn = l.audio ? '<button class="vplay" type="button" data-i="' + TR.lines.indexOf(l) + '" aria-label="Play this recording" title="Play the recording">&#9654;</button>' : "";
       var sp = voice.line === l ? " speaking" : "";
       return '<div class="vl ' + cls + sp + '"><span class="vt">' + fmtGET(l.get) + '</span><span class="vw ' + role + '">' + esc(l.who) + '</span><span class="vx">' + btn + esc(l.text) + (l.kind === "onboard" ? '<span class="ob">onboard recorder</span>' : "") + src + "</span></div>";
-    }).join("") + (voice.blocked ? '<div class="hint">Press Play or Sound on to hear the real voices.</div>' : "");
+    }).join("") + (voice.blocked ? '<div class="hint">Your browser held back the sound. Press Play to continue with the real voices.</div>' : "");
   }
 
   // ---------- canvas ----------
@@ -1523,11 +1592,11 @@ button, select, input { font: inherit; color: inherit; }
   jump.addEventListener("change", function () { if (jump.value) { seekEvent(jump.value, true); jump.value = ""; } });
   var scrub = $("scrub");
   scrub.max = TOTAL;
-  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); state.dirty = true; stopVoice(); voice.lastG = null; });
+  scrub.addEventListener("input", function () { state.play = parseFloat(scrub.value); state.dirty = true; voiceSeeked(); });
 
   function setPlaying(p) {
     state.playing = p && state.play < TOTAL;
-    if (!state.playing && voice.hold) stopVoice();
+    if (!state.playing && voice.el && !voice.manual) { try { voice.el.pause(); } catch (e) {} } // resumes with Play
     $("play-text").textContent = state.playing ? "Pause" : "Play";
     $("play").setAttribute("aria-label", state.playing ? "Pause" : "Play");
     $("play-icon").innerHTML = state.playing ? '<path d="M3 2h4v12H3zM9 2h4v12H9z"/>' : '<path d="M4 2l10 6-10 6z"/>';
@@ -1536,7 +1605,7 @@ button, select, input { font: inherit; color: inherit; }
   function seekEvent(id, keepPlaying) {
     var e = EV[id]; if (!e) return;
     state.play = Math.min(TOTAL, getToPlay(e.get) + 0.002);
-    stopVoice(); voice.lastG = null;
+    voiceSeeked();
     state.lastEvent = e; state.dirty = true;
     showToast(e);
     if (!keepPlaying) setPlaying(false);
@@ -1593,7 +1662,7 @@ button, select, input { font: inherit; color: inherit; }
   function frame(now) {
     var dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (state.playing) {
-      if (!voice.hold) state.play += dt * state.speed; // the clock waits while someone is speaking
+      if (!voiceHolding()) state.play += dt * state.speed; // the clock waits while someone is speaking
       if (state.play >= TOTAL) { state.play = TOTAL; setPlaying(false); }
       state.dirty = true;
     }
