@@ -34,6 +34,8 @@ jobs:
           cp explained/live/screenshot.png _site/
           mkdir -p _site/audio && cp explained/live/audio/*.mp3 _site/audio/
           touch _site/.nojekyll
+          printf 'User-agent: *\nAllow: /\nSitemap: https://martha889.github.io/apollo-11-explained/sitemap.xml\n' > _site/robots.txt
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://martha889.github.io/apollo-11-explained/</loc>\n  </url>\n</urlset>\n' > _site/sitemap.xml
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

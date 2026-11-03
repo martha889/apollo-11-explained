@@ -1,14 +1,30 @@
-# Apollo 11 Explained
+# Apollo 11 Explained: the Apollo Guidance Computer (AGC) source code, made readable
+
+The original Apollo 11 source code for the Apollo Guidance Computer (AGC), Comanche055 for the Command Module *Columbia* and Luminary099 for the Lunar Module *Eagle*, explained with readable Python translations and an interactive replay of the Moon landing mission.
 
 **[Watch the live mission replay →](https://martha889.github.io/apollo-11-explained/)**
 
 [![Apollo 11 Live: trajectory, the two DSKYs, and the AGC code running during the 1202 alarm](explained/live/screenshot.png)](https://martha889.github.io/apollo-11-explained/)
 
-The software that flew Apollo 11 to the Moon, made readable. This repository pairs the original Apollo Guidance Computer (AGC) assembly with Python translations of its key algorithms. It also has a step-by-step replay of the whole mission.
+## What's inside
 
-- **[Live mission viewer](https://martha889.github.io/apollo-11-explained/)**: launch to splashdown on the real mission clock. Three panels show where the spacecraft was, what Columbia's and Eagle's DSKYs displayed (including the 1202 and 1201 program alarms), and the AGC source that was running at that moment, with the crew's and Mission Control's real voices from NASA's recordings. The DSKYs respond to the keyboard too: pause and key `V16 N36 ENTR` to watch the AGC clock. Jump straight to an event: [powered descent](https://martha889.github.io/apollo-11-explained/#pdi), [1202 alarm](https://martha889.github.io/apollo-11-explained/#alarm-1202), [touchdown](https://martha889.github.io/apollo-11-explained/#touchdown), [entry](https://martha889.github.io/apollo-11-explained/#entry-interface).
-- **[`explained/`](explained/)**: Python walkthroughs, from how the AGC worked (ones'-complement numbers, the Executive and Waitlist, the interpreter, the DSKY) through every mission phase: the P11 launch monitor, free-return coast, P52 star alignment, P40 burns, P63–P66 landing guidance, P12 ascent, rendezvous and P61–P67 entry. Each module cites the original routines by file and label, and saves figures to [`explained/figures/`](explained/figures/).
-- **[`Comanche055/`](Comanche055/)** and **[`Luminary099/`](Luminary099/)**: the original flight software for the Command Module *Columbia* and the Lunar Module *Eagle*, unchanged.
+### Live mission viewer
+
+Replay Apollo 11 from launch to splashdown on the real mission clock (Ground Elapsed Time). Three panels show the trajectory, Columbia's and Eagle's DSKYs as the astronauts saw them (including the 1202 and 1201 program alarms during the landing), and the AGC source that was running at that moment, with a Python translation alongside. Real air-to-ground voices from NASA's recordings play as the mission passes each line. The DSKYs take keyboard input (pause and key `V16 N36 ENTR` for the AGC clock, `V35 ENTR` for a lamp test). The rendezvous is drawn to scale: Eagle catching up with Columbia, braking, station-keeping and docking, following the crew's range calls in the Apollo Flight Journal. Works offline as one HTML file.
+
+Jump to a moment: [Translunar injection](https://martha889.github.io/apollo-11-explained/#tli) · [Lunar orbit insertion](https://martha889.github.io/apollo-11-explained/#loi-1) · [Powered descent](https://martha889.github.io/apollo-11-explained/#pdi) · [1202 alarm](https://martha889.github.io/apollo-11-explained/#alarm-1202) · [Touchdown](https://martha889.github.io/apollo-11-explained/#touchdown) · [First step](https://martha889.github.io/apollo-11-explained/#first-step) · [Lunar liftoff](https://martha889.github.io/apollo-11-explained/#liftoff) · [Docking in lunar orbit](https://martha889.github.io/apollo-11-explained/#docking) · [Entry](https://martha889.github.io/apollo-11-explained/#entry-interface) · [Splashdown](https://martha889.github.io/apollo-11-explained/#splashdown)
+
+### Python walkthroughs
+
+[`explained/`](explained/): Python walkthroughs, from how the AGC worked (ones'-complement numbers, the Executive and Waitlist, the interpreter, the DSKY) through every mission phase: the P11 launch monitor, free-return coast, P52 star alignment, P40 burns, P63–P66 landing guidance, P12 ascent, rendezvous (P32–P35, P20 radar navigation), and P61–P67 entry. Each module cites original routines by file and label, and saves figures to [`explained/figures/`](explained/figures/). See [`explained/README.md`](explained/README.md) for the module guide.
+
+### Original flight software
+
+[`Comanche055/`](Comanche055/) and [`Luminary099/`](Luminary099/): the original flight software for the Command Module *Columbia* and the Lunar Module *Eagle*, unchanged.
+
+## Background
+
+The Apollo Guidance Computer (AGC) was built by the MIT Instrumentation Laboratory. It had 36,864 words of fixed core-rope memory and 2,048 words of erasable memory (15-bit words plus parity). The software team was led by Margaret Hamilton. During the landing on 20 July 1969, the LM computer raised 1202 and 1201 program alarms (executive overflow) and its restart protection kept the guidance running, so Mission Control called "Go". Eagle landed at Tranquility Base at 102:45:40 GET.
 
 ## Run it locally
 

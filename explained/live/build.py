@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import base64
 import contextlib
+import html
 import inspect
 import io
 import json
@@ -950,6 +951,16 @@ def bundle_fonts(template: str) -> str:
     return template.replace(placeholder, "\n".join(rules))
 
 
+SITE_URL = "https://martha889.github.io/apollo-11-explained/"
+PAGE_TITLE = "Apollo 11 Live: mission replay with the guidance computer code"
+PAGE_DESC = (
+    "Replay Apollo 11 from launch to splashdown: the trajectory, Columbia's and "
+    "Eagle's DSKYs, the AGC source code that was running, and the crew's real voices."
+)
+PAGE_IMAGE = f"{SITE_URL}screenshot.png"
+PAGE_IMAGE_ALT = "Apollo 11 Live: trajectory, the two DSKYs, and the AGC code running during the 1202 alarm"
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--fragment", metavar="PATH", help="also write the page without the html/head/body wrapper")
@@ -961,8 +972,47 @@ def main(argv=None):
     blob = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
     tpl = (LIVE / "template.html").read_text(encoding="utf-8")
     frag = bundle_fonts(tpl).replace("__MISSION_DATA__", blob)
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": PAGE_TITLE,
+        "url": SITE_URL,
+        "description": PAGE_DESC,
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Any (web browser)",
+        "isAccessibleForFree": True,
+        "license": "https://opensource.org/licenses/MIT",
+        "author": {
+            "@type": "Person",
+            "name": "Sarthak Choudhary",
+        },
+        "about": [
+            "Apollo 11",
+            "Apollo Guidance Computer",
+        ],
+    }
+    ld_json = json.dumps(json_ld, indent=2).replace("</", "<\\/")
+    head_meta = (
+        f"<title>{html.escape(PAGE_TITLE)}</title>\n"
+        f'<meta name="description" content="{html.escape(PAGE_DESC, quote=True)}">\n'
+        f'<link rel="canonical" href="{html.escape(SITE_URL, quote=True)}">\n'
+        f'<meta property="og:type" content="website">\n'
+        f'<meta property="og:site_name" content="Apollo 11 Explained">\n'
+        f'<meta property="og:title" content="{html.escape(PAGE_TITLE, quote=True)}">\n'
+        f'<meta property="og:description" content="{html.escape(PAGE_DESC, quote=True)}">\n'
+        f'<meta property="og:url" content="{html.escape(SITE_URL, quote=True)}">\n'
+        f'<meta property="og:image" content="{html.escape(PAGE_IMAGE, quote=True)}">\n'
+        f'<meta property="og:image:alt" content="{html.escape(PAGE_IMAGE_ALT, quote=True)}">\n'
+        f'<meta name="twitter:card" content="summary_large_image">\n'
+        f'<meta name="twitter:title" content="{html.escape(PAGE_TITLE, quote=True)}">\n'
+        f'<meta name="twitter:description" content="{html.escape(PAGE_DESC, quote=True)}">\n'
+        f'<meta name="twitter:image" content="{html.escape(PAGE_IMAGE, quote=True)}">\n'
+        f'<meta name="theme-color" content="#0d121b">\n'
+        f'<script type="application/ld+json">\n{ld_json}\n</script>\n'
+    )
     full = ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
+            + head_meta +
             "<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}"
             "body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>\n"
             "</head>\n<body>\n" + frag + "\n</body>\n</html>\n")
