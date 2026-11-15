@@ -29,21 +29,36 @@ python explained/mission.py --only lm_02    # Run a single phase by short ID, mo
 
 ## Live Mission Viewer
 
-[`live/`](live/) holds an animated, single-page replay of the whole flight, from launch to splashdown, on the real mission clock. It has three linked panels:
+[`live/`](live/) holds an animated, single-page replay of the whole flight, from launch to splashdown, on the real mission clock. Its modular source lives in [`live/src/`](live/src/) (`css/`, `js/`, and `js/scenes/`) and is assembled with simulation data by [`live/build.py`](live/build.py) into `explained/live/apollo11_live.html` (see [`live/src/FX_API.md`](live/src/FX_API.md) for the canvas/FX helper reference and [`live/DATA.md`](live/DATA.md) for the embedded telemetry and timeline schema). It has three linked panels:
 
-- **Trajectory**: the spacecraft's path, with a view that changes with each phase (Earth orbit, the Earth–Moon figure-8, lunar orbit, the descent profile, a to-scale animation of Eagle catching and docking with Columbia, entry).
+- **Trajectory**: the spacecraft's path, with a view that changes with each phase (Earth orbit, the Earth–Moon figure-8, lunar orbit, the descent profile, lunar surface EVA, ascent, a to-scale animation of Eagle catching and docking with Columbia, entry), complete with cinematic canvas effects (multi-layer starfield, procedural Earth and Moon, engine exhaust plumes, lunar dust, and event pulses), live telemetry strip charts, and air-to-ground crew callouts.
 - **Guidance computers**: Columbia's and Eagle's DSKYs as the crew saw them. They show the program, verb, noun, registers and warning lights, including the 1202/1201 alarms.
 - **Voice loop**: what the crew and Mission Control said at that moment, with the real recordings (30 clips of NASA's air-to-ground audio; the clock waits while someone speaks, and the Sound button turns it off), verbatim and timed to the GET, from NASA's transcripts as published in the [Apollo Flight Journal](https://apollojournals.org/afj/) and [Apollo Lunar Surface Journal](https://apollojournals.org/alsj/) (lines and sources in [`live/transcript.json`](live/transcript.json); each clip's source file and time window in [`live/audio/clips.json`](live/audio/clips.json), cut by [`live/tools/cut_audio.py`](live/tools/cut_audio.py)).
 - **Code**: the AGC source that was running at that moment, quoted line for line from `Comanche055/` and `Luminary099/`, next to its Python translation from this folder.
 
 ```bash
-python explained/live/build.py          # reruns the simulations, writes explained/live/apollo11_live.html
-open explained/live/apollo11_live.html  # any browser; works offline from file://
+python explained/live/build.py                # reruns the simulations, writes explained/live/apollo11_live.html
+open explained/live/apollo11_live.html        # any browser; works offline from file://
+python explained/live/smoke.py                # headless Chrome smoke test across all 29 events + default load
+python explained/live/smoke.py --shots DIR    # save a PNG screenshot per target and verify canvas ink
+python explained/live/smoke.py --sweep N      # test N evenly spaced playback times across the mission
 ```
 
-Controls: Space to play or pause, the Left/Right arrows to jump between events, and a speed selector (the full mission plays in about 6.5 minutes at 1×). You can also link to an event directly with a hash such as `apollo11_live.html#pdi`, `#alarm-1202`, `#touchdown` or `#entry-interface`. Every DSKY caption says whether its numbers come from a simulation or show only the program the crew would have had up. Notes in the trajectory panel say where a simulation was retimed onto the real ground elapsed time.
+**Keyboard shortcuts & controls:** `Space` to play or pause, `Left` / `Right` arrows to step to the previous or next event, `1`–`4` to select playback speed (`0.5×`, `1×`, `2×`, `4×`; the full mission plays in about 6.5 minutes at `1×`), `M` (or the **Sound** button) to turn the crew voice audio on or off (when sound is on, the clock waits while someone speaks), `F` to toggle theatre mode (`Esc` to exit theatre mode or close popovers), and `?` to toggle the keyboard shortcuts help panel.
 
-Both DSKYs are interactive: pause playback and press any key to enter crew mode and key verbs and nouns as the crew did. Try `V35 ENTR` for a lamp test, `V16 N36 ENTR` to watch the AGC mission clock tick, `V05 N09 ENTR` to inspect alarm codes, or `V37 ENTR 00 ENTR` to change programs. Pressing `KEY REL` returns the DSKY to following the timeline.
+**Deep links:** You can link directly to any event by ID (e.g. `apollo11_live.html#pdi`, `#alarm-1202`, `#touchdown`, `#entry-interface`), to a playback time in seconds (`#t=<playback seconds>`, e.g. `#t=120`), or to a mission ground elapsed time (`#get=HHH:MM:SS`, e.g. `#get=102:33:05`). Every DSKY caption says whether its numbers come from a simulation or show only the program the crew would have had up, and notes in the trajectory panel say where a simulation was retimed onto the real ground elapsed time.
+
+Both DSKYs are interactive: click a key on a DSKY's keypad (open it with the `Keys` button; clicking a key pauses playback) or press a key while its keypad has focus to enter crew mode and key verbs and nouns as the crew did. Try `V35 ENTR` for a lamp test, `V16 N36 ENTR` to watch the AGC mission clock tick, `V05 N09 ENTR` to inspect alarm codes, or `V37 ENTR 00 ENTR` to change programs. While a DSKY is in crew mode the keyboard drives it (`0`-`9`, `V` verb, `N` noun, `+`, `-`, `C` clear, `P` proceed, `Enter`, `R` reset, `K` key release) and the single-key viewer shortcuts are suppressed except `Space` and `Esc`. Pressing `KEY REL` returns the DSKY to following the timeline.
+
+---
+
+## Tests
+
+Install the test runner (`pip install -r explained/requirements-dev.txt`) and run the unit and integration test suite from `explained/`:
+
+```bash
+cd explained && python -m pytest tests -q
+```
 
 ---
 
@@ -135,3 +150,4 @@ Translates `P61-P67.agc` and `REENTRY_CONTROL.agc` for *Columbia*'s 11.03 km/s l
 * **Floating-point translations, not cycle-accurate emulation:** Except in [`agc_00_numbers.py`](agc_00_numbers.py) (which explicitly implements 15-bit ones'-complement words and `B-n` fixed-point quantization), the physics and guidance equations are translated into standard Python/NumPy floating-point in SI units so you can read the math directly alongside the cited AGC assembly labels. (If you want a cycle-accurate Block II CPU emulator running the assembled rope binaries, see the [Virtual AGC (`yaAGC`)](https://www.ibiblio.org/apollo/) project.)
 * **Planar / simplified environmental models where flagged:** Several walkthroughs use clearly flagged approximations for external environments not stored inside the AGC ROM—such as a 3-stage Saturn V booster acceleration profile in [`csm_01_earth_orbit_p11.py`](csm_01_earth_orbit_p11.py) (since the Saturn Instrument Unit steered the rocket), a circular lunar ephemeris in [`csm_02_conics_coast.py`](csm_02_conics_coast.py), a 2D downrange/altitude guidance plane in [`lm_01_powered_descent.py`](lm_01_powered_descent.py) and [`lm_02_ascent_p12.py`](lm_02_ascent_p12.py), Clohessy-Wiltshire relative motion in [`lm_03_rendezvous.py`](lm_03_rendezvous.py), and an exponential atmosphere in [`csm_05_entry_p61_p67.py`](csm_05_entry_p61_p67.py).
 * **Every algorithm cites its exact assembly label:** Every translated function calls `src("Comanche055/...", "LABEL")` or `src("Luminary099/...", "LABEL")`, which asserts at runtime that the referenced `.agc` source file exists in this repository.
+* **Illustrative visuals in the live viewer:** In the live mission viewer, the lunar terrain profile, spacecraft attitude between telemetry samples, surface astronaut choreography, and Earth's procedural continents are illustrative rather than reconstructed from flight telemetry.

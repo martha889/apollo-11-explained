@@ -26,8 +26,10 @@ from matplotlib.patches import Circle
 from common import (
     MU_EARTH,
     MU_MOON,
+    PALETTE,
     R_EARTH,
     R_MOON,
+    glow_line,
     src,
     step,
     save,
@@ -657,6 +659,7 @@ def plot_kepler_and_lambert(kep_hist, lamb_hist, r1, r2, v1_lamb, dt_lamb):
         "Comanche055 CONIC_SUBROUTINES.agc — Universal Kepler & Lambert Solvers",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Panel 1: Universal Kepler bounded secant convergence
@@ -666,8 +669,8 @@ def plot_kepler_and_lambert(kep_hist, lamb_hist, r1, r2, v1_lamb, dt_lamb):
     xmins_k = [h["x_min"] for h in kep_hist]
     xmaxs_k = [h["x_max"] for h in kep_hist]
 
-    color_err = "#2563eb"
-    color_x = "#d97706"
+    color_err = PALETTE["csm"]
+    color_x = PALETTE["lm"]
     ax1.semilogy(
         iters_k,
         errs_k,
@@ -689,11 +692,13 @@ def plot_kepler_and_lambert(kep_hist, lamb_hist, r1, r2, v1_lamb, dt_lamb):
         xmins_k,
         xmaxs_k,
         color=color_x,
-        alpha=0.12,
+        alpha=0.14,
         label="[XMIN, XMAX] Bracket",
     )
     ax1_r.set_ylabel("Universal Variable x (m^(1/2))", color=color_x)
     ax1_r.tick_params(axis="y", labelcolor=color_x)
+    ax1_r.spines["right"].set_visible(True)
+    ax1_r.spines["right"].set_color(PALETTE["spine"])
     ax1_r.grid(False)
 
     lines1, labels1 = ax1.get_legend_handles_labels()
@@ -709,13 +714,13 @@ def plot_kepler_and_lambert(kep_hist, lamb_hist, r1, r2, v1_lamb, dt_lamb):
         iters_l,
         errs_l,
         "o-",
-        color="#dc2626",
+        color=PALETTE["alarm"],
         lw=2.2,
         label="|dt - t(COGA)| Residual (s)",
     )
     ax2.set_xlabel("LAMBLOOP Iteration")
-    ax2.set_ylabel("Transit Time Residual (s)", color="#dc2626")
-    ax2.tick_params(axis="y", labelcolor="#dc2626")
+    ax2.set_ylabel("Transit Time Residual (s)", color=PALETTE["alarm"])
+    ax2.tick_params(axis="y", labelcolor=PALETTE["alarm"])
     ax2.set_xticks(iters_l)
     ax2.set_title("LAMBERT / ITERATOR cot(gamma_1) Convergence")
 
@@ -724,12 +729,14 @@ def plot_kepler_and_lambert(kep_hist, lamb_hist, r1, r2, v1_lamb, dt_lamb):
         iters_l,
         cogas_l,
         "^--",
-        color="#059669",
+        color=PALETTE["dsky"],
         lw=1.8,
         label="COGA = cot(gamma_1)",
     )
-    ax2_r.set_ylabel("COGA = cot(gamma_1)", color="#059669")
-    ax2_r.tick_params(axis="y", labelcolor="#059669")
+    ax2_r.set_ylabel("COGA = cot(gamma_1)", color=PALETTE["dsky"])
+    ax2_r.tick_params(axis="y", labelcolor=PALETTE["dsky"])
+    ax2_r.spines["right"].set_visible(True)
+    ax2_r.spines["right"].set_color(PALETTE["spine"])
     ax2_r.grid(False)
 
     l1, lb1 = ax2.get_legend_handles_labels()
@@ -768,6 +775,7 @@ def plot_translunar_free_return(encke_data, moon_pos_fn):
         "Comanche055 ORBITAL_INTEGRATION.agc — Encke Free-Return Coast & SOI Switching",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Panel 1: Figure-8 trajectory in Earth-Moon rotating frame
@@ -777,37 +785,38 @@ def plot_translunar_free_return(encke_data, moon_pos_fn):
     ax1.plot(
         r_syn[:, 0],
         r_syn[:, 1],
-        color="#94a3b8",
-        lw=1.0,
+        color=PALETTE["muted"],
+        lw=1.1,
+        alpha=0.5,
         zorder=1,
     )
     ax1.scatter(
         r_syn[earth_Mask, 0],
         r_syn[earth_Mask, 1],
         s=6,
-        color="#2563eb",
+        color=PALETTE["csm"],
         label="Earth-Centered Conic + Encke (Origin = Earth)",
         zorder=2,
     )
     ax1.scatter(
         r_syn[moon_Mask, 0],
         r_syn[moon_Mask, 1],
-        s=8,
-        color="#d97706",
+        s=9,
+        color=PALETTE["lm"],
         label="Moon-Centered Conic + Encke (Origin = Moon)",
         zorder=3,
     )
 
     # Plot Earth, Moon, and AGC RSPHERE circle around Moon
-    ax1.add_patch(Circle((0.0, 0.0), R_EARTH / 1e3, color="#1d4ed8", alpha=0.85, zorder=4))
-    ax1.plot(0.0, 0.0, "o", color="#1d4ed8", ms=8, label="Earth")
-    ax1.plot(d_em_km, 0.0, "o", color="#475569", ms=6, label="Moon")
+    ax1.add_patch(Circle((0.0, 0.0), R_EARTH / 1e3, color=PALETTE["earth"], alpha=0.85, zorder=4))
+    ax1.plot(0.0, 0.0, "o", color=PALETTE["earth"], ms=8, label="Earth")
+    ax1.plot(d_em_km, 0.0, "o", color=PALETTE["moon"], ms=7, label="Moon")
     soi_circle = Circle(
         (d_em_km, 0.0),
         RSPHERE_MOON_M / 1e3,
         fill=False,
         ls="--",
-        color="#d97706",
+        color=PALETTE["lm"],
         lw=1.4,
         label=f"AGC RSPHERE ({RSPHERE_MOON_M/1e3:,.0f} km)",
     )
@@ -826,9 +835,9 @@ def plot_translunar_free_return(encke_data, moon_pos_fn):
             rect_syn[:, 0],
             rect_syn[:, 1],
             "x",
-            color="#dc2626",
-            ms=6,
-            mew=1.5,
+            color=PALETTE["alarm"],
+            ms=6.5,
+            mew=1.6,
             label=f"RECTIFY Events ({len(rect_syn)} conic resets)",
             zorder=5,
         )
@@ -841,28 +850,31 @@ def plot_translunar_free_return(encke_data, moon_pos_fn):
         "Outbound Coast\n(Post-TLI, ~3 days)",
         xy=(r_syn[mid_out, 0], r_syn[mid_out, 1]),
         xytext=(r_syn[mid_out, 0] - 55000, r_syn[mid_out, 1] + 38000),
-        arrowprops=dict(arrowstyle="->", color="#2563eb", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["csm"], lw=1.2),
         fontsize=8.5,
-        color="#1e40af",
+        color=PALETTE["csm"],
         fontweight="bold",
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["csm"], alpha=0.9),
     )
     ax1.annotate(
         "Transearth Return\n(Free-Return, ~3 days)",
         xy=(r_syn[mid_ret, 0], r_syn[mid_ret, 1]),
         xytext=(r_syn[mid_ret, 0] + 5000, r_syn[mid_ret, 1] - 50000),
-        arrowprops=dict(arrowstyle="->", color="#0f766e", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["cyan"], lw=1.2),
         fontsize=8.5,
-        color="#0f766e",
+        color=PALETTE["cyan"],
         fontweight="bold",
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["cyan"], alpha=0.9),
     )
     ax1.annotate(
         "Pericynthion\n(Far-Side, h = 210 km)",
         xy=(r_syn[idx_peri, 0], r_syn[idx_peri, 1]),
         xytext=(r_syn[idx_peri, 0] + 18000, r_syn[idx_peri, 1] + 32000),
-        arrowprops=dict(arrowstyle="->", color="#b45309", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["lm"], lw=1.2),
         fontsize=8.5,
-        color="#b45309",
+        color=PALETTE["lm"],
         fontweight="bold",
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["lm"], alpha=0.9),
     )
 
     ax1.set_xlim(-35000, 520000)
@@ -874,24 +886,26 @@ def plot_translunar_free_return(encke_data, moon_pos_fn):
 
     # Panel 2: Encke deviation |delta_r| sawtooth and RECTIFY resets vs time
     t_hours = t_arr / 3600.0
-    ax2.plot(
+    glow_line(
+        ax2,
         t_hours,
         delta_km,
-        color="#dc2626",
-        lw=1.5,
+        color=PALETTE["csm"],
+        lw=1.6,
         label="Encke Deviation |delta_r| (km)",
     )
     y_fracs = [0.84, 0.64]
     for idx_sw, (label_sw, t_sw, _) in enumerate(encke_data["soi_switches"]):
-        ax2.axvline(t_sw / 3600.0, color="#d97706", ls="--", lw=1.4)
+        ax2.axvline(t_sw / 3600.0, color=PALETTE["lm"], ls="--", lw=1.4)
         yf = y_fracs[idx_sw % len(y_fracs)]
         ax2.text(
             t_sw / 3600.0 + 1.5,
             max(delta_km) * yf,
             f"ORIGCHNG:\n{label_sw}\n(t={t_sw/3600:.1f} h)",
             fontsize=8,
-            color="#b45309",
+            color=PALETTE["lm"],
             fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.2", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["lm"], alpha=0.9),
         )
 
     ax2.set_xlabel("Mission Elapsed Time Since TLI Cutoff (hours)")

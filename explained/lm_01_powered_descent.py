@@ -12,7 +12,7 @@ loop from Luminary099 into readable Python:
 import numpy as np
 import matplotlib.pyplot as plt
 
-from common import MU_MOON, R_MOON, save, src, step
+from common import MU_MOON, PALETTE, R_MOON, glow_line, save, src, step
 
 
 # ---------------------------------------------------------------------------
@@ -443,7 +443,7 @@ def plot_trajectory(sim: dict) -> None:
     fig, (ax_main, ax_zoom) = plt.subplots(
         1, 2, figsize=(13.2, 5.6), gridspec_kw={"width_ratios": [1.5, 1.0]}
     )
-    phase_colors = {63: "#1f77b4", 64: "#ff7f0e", 66: "#2ca02c"}
+    phase_colors = {63: PALETTE["p63"], 64: PALETTE["p64"], 66: PALETTE["p66"]}
     phase_names = {
         63: "P63 Braking (BRAKQUAD)",
         64: "P64 Approach (APPRQUAD)",
@@ -453,14 +453,16 @@ def plot_trajectory(sim: dict) -> None:
     for ph in (63, 64, 66):
         mask = sim["phase"] == ph
         if np.any(mask):
-            ax_main.plot(
+            glow_line(
+                ax_main,
                 sim["downrange"][mask],
                 sim["alt_true"][mask] / 1000.0,
                 color=phase_colors[ph],
                 lw=2.6,
                 label=phase_names[ph],
             )
-            ax_zoom.plot(
+            glow_line(
+                ax_zoom,
                 sim["downrange"][mask] * 1000.0,
                 sim["alt_true"][mask],
                 color=phase_colors[ph],
@@ -476,26 +478,28 @@ def plot_trajectory(sim: dict) -> None:
     t_p64 = float(sim["t"][sim["phase"] == 64][0])
 
     events = [
-        (0.0, "PDI (10% trim, 26 s)\nh = 15.2 km, v = 1695 m/s", (16, -34)),
-        (t_lr, "LR Lock (<35,000 ft)\nPOSUPDAT begins", (-175, 12)),
-        (317.0, "1202 Alarm (PDI+5:17)\nRestart (PHASCHNG)", (-185, -22)),
-        (t_throt_down, "Throttle-Down (~57%)\nWHERETO / FCOMPSET", (-180, -4)),
-        (t_p64, "High Gate -> P64 (PDI+8:26)\nh = 2.14 km (~7,020 ft)", (-190, 20)),
-        (553.0, "1201 Alarm (PDI+9:13)\nin P64 Approach", (-175, -10)),
+        (0.0, "PDI (10% trim, 26 s)\nh = 15.2 km, v = 1695 m/s", (16, -34), PALETTE["p63"]),
+        (t_lr, "LR Lock (<35,000 ft)\nPOSUPDAT begins", (-175, 12), PALETTE["dsky"]),
+        (317.0, "1202 Alarm (PDI+5:17)\nRestart (PHASCHNG)", (-185, -22), PALETTE["alarm"]),
+        (t_throt_down, "Throttle-Down (~57%)\nWHERETO / FCOMPSET", (-180, -4), PALETTE["lm"]),
+        (t_p64, "High Gate -> P64 (PDI+8:26)\nh = 2.14 km (~7,020 ft)", (-190, 20), PALETTE["p64"]),
+        (553.0, "1201 Alarm (PDI+9:13)\nin P64 Approach", (-175, -10), PALETTE["alarm"]),
     ]
-    for t_ev, label, offset in events:
+    for t_ev, label, offset, ev_col in events:
         idx = int(np.argmin(np.abs(sim["t"] - t_ev)))
         x_pt = sim["downrange"][idx]
         y_pt = sim["alt_true"][idx] / 1000.0
-        ax_main.scatter([x_pt], [y_pt], color="#d62728", zorder=5, s=36)
+        ax_main.scatter([x_pt], [y_pt], color=ev_col, zorder=5, s=40)
         ax_main.annotate(
             label,
             xy=(x_pt, y_pt),
             xytext=offset,
             textcoords="offset points",
-            fontsize=8.3,
-            arrowprops={"arrowstyle": "->", "color": "#444444", "lw": 0.9},
-            bbox={"boxstyle": "round,pad=0.22", "fc": "white", "ec": "#cccccc", "alpha": 0.92},
+            fontsize=8.2,
+            color=ev_col,
+            fontweight="bold",
+            arrowprops={"arrowstyle": "->", "color": ev_col, "lw": 1.0},
+            bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": ev_col, "alpha": 0.92},
         )
 
     ax_main.set_ylim(-0.6, 17.2)
@@ -510,23 +514,25 @@ def plot_trajectory(sim: dict) -> None:
     p66_idx = int(np.where(sim["phase"] == 66)[0][0])
     td_idx = len(sim["t"]) - 1
 
-    for idx, text, offset in [
-        (p64_idx, f"High Gate -> P64 (PDI+8:26)\nh = {sim['alt_true'][p64_idx]:.0f} m (~7,020 ft)", (14, -28)),
-        (alarm1201_idx, f"1201 Alarm (PDI+9:13)\nh = {sim['alt_true'][alarm1201_idx]:.0f} m (in P64)", (-145, 22)),
-        (p66_idx, f"Armstrong P66 + ROD (PDI+10:14)\nh = {sim['alt_true'][p66_idx]:.0f} m (~440 ft)", (-175, 42)),
-        (td_idx, "Touchdown (PDI+12:34)\nTranquility Base", (-135, 12)),
+    for idx, text, offset, ev_col in [
+        (p64_idx, f"High Gate -> P64 (PDI+8:26)\nh = {sim['alt_true'][p64_idx]:.0f} m (~7,020 ft)", (14, -28), PALETTE["p64"]),
+        (alarm1201_idx, f"1201 Alarm (PDI+9:13)\nh = {sim['alt_true'][alarm1201_idx]:.0f} m (in P64)", (-145, 22), PALETTE["alarm"]),
+        (p66_idx, f"Armstrong P66 + ROD (PDI+10:14)\nh = {sim['alt_true'][p66_idx]:.0f} m (~440 ft)", (-175, 42), PALETTE["p66"]),
+        (td_idx, "Touchdown (PDI+12:34)\nTranquility Base", (-135, 12), PALETTE["dsky"]),
     ]:
         x_m = sim["downrange"][idx] * 1000.0
         y_m = sim["alt_true"][idx]
-        ax_zoom.scatter([x_m], [y_m], color="#d62728", zorder=5, s=40)
+        ax_zoom.scatter([x_m], [y_m], color=ev_col, zorder=5, s=42)
         ax_zoom.annotate(
             text,
             xy=(x_m, y_m),
             xytext=offset,
             textcoords="offset points",
-            fontsize=8.3,
-            arrowprops={"arrowstyle": "->", "color": "#444444", "lw": 0.9},
-            bbox={"boxstyle": "round,pad=0.22", "fc": "white", "ec": "#cccccc", "alpha": 0.92},
+            fontsize=8.2,
+            color=ev_col,
+            fontweight="bold",
+            arrowprops={"arrowstyle": "->", "color": ev_col, "lw": 1.0},
+            bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": ev_col, "alpha": 0.92},
         )
 
     x_min_zoom = min(float(sim["downrange"][p64_idx] * 1000.0) - 400.0, -5500.0)
@@ -534,7 +540,7 @@ def plot_trajectory(sim: dict) -> None:
     y_max_zoom = max(float(sim["alt_true"][p64_idx]) + 350.0, 2600.0)
     ax_zoom.set_xlim(x_min_zoom, x_max_zoom)
     ax_zoom.set_ylim(-80, y_max_zoom)
-    ax_zoom.set_title("Terminal Zoom: P64 Approach, 1201 Alarm & P66 Landing")
+    ax_zoom.set_title("Terminal Zoom: P64, 1201 Alarm & P66 Landing", fontsize=10.0)
     ax_zoom.set_xlabel("Downrange Distance to Site (m)")
     ax_zoom.set_ylabel("Altitude (m)")
 
@@ -551,28 +557,37 @@ def plot_throttle_vel_pitch(sim: dict) -> None:
     t_tdn = float(t[throt_down_indices[0]]) if len(throt_down_indices) > 0 else 374.0
 
     # Panel 1: Throttle %
-    ax1.plot(t, sim["throttle"], color="#d62728", lw=2.2, label="Commanded DPS Throttle (%)")
-    ax1.axhline(57.0, color="#555555", ls="--", lw=1.0, label="LOWCRIT (~57% throttle-down)")
+    glow_line(ax1, t, sim["throttle"], color=PALETTE["lm"], lw=2.2, label="Commanded DPS Throttle (%)")
+    ax1.axhline(57.0, color=PALETTE["muted"], ls="--", lw=1.0, label="LOWCRIT (~57% throttle-down)")
     ax1.annotate(
         "26 s @ 10% (ZOOMTIME)\ngimbal trim",
         xy=(13.0, 10.0),
         xytext=(42.0, 22.0),
-        fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#444444"},
+        fontsize=8.3,
+        color=PALETTE["text"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.2", "fc": PALETTE["fig_bg"], "ec": PALETTE["spine"], "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": PALETTE["muted"]},
     )
     ax1.annotate(
         "Full Throttle (FMAXODD ~94%)",
         xy=(180.0, 94.0),
-        xytext=(130.0, 74.0),
-        fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#444444"},
+        xytext=(115.0, 72.0),
+        fontsize=8.3,
+        color=PALETTE["lm"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.2", "fc": PALETTE["fig_bg"], "ec": PALETTE["lm"], "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": PALETTE["lm"]},
     )
     ax1.annotate(
         "Quadratic guidance throttle-down",
         xy=(t_tdn, 55.0),
-        xytext=(t_tdn - 165.0, 35.0),
-        fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#444444"},
+        xytext=(t_tdn - 185.0, 32.0),
+        fontsize=8.3,
+        color=PALETTE["lm"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.2", "fc": PALETTE["fig_bg"], "ec": PALETTE["lm"], "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": PALETTE["lm"]},
     )
     ax1.set_ylabel("Throttle (%)")
     ax1.set_ylim(0, 105)
@@ -580,27 +595,27 @@ def plot_throttle_vel_pitch(sim: dict) -> None:
     ax1.legend(loc="upper right", fontsize=8.5)
 
     # Panel 2: Velocity components
-    ax2.plot(t, sim["v_horiz"], color="#1f77b4", lw=2.0, label="Horizontal Speed V_GUz (m/s)")
-    ax2.plot(t, -sim["v_vert"], color="#2ca02c", lw=2.0, label="Descent Rate -HDOTDISP (m/s)")
+    glow_line(ax2, t, sim["v_horiz"], color=PALETTE["csm"], lw=2.0, label="Horizontal Speed V_GUz (m/s)")
+    glow_line(ax2, t, -sim["v_vert"], color=PALETTE["dsky"], lw=2.0, label="Descent Rate -HDOTDISP (m/s)")
     ax2.set_ylabel("Speed (m/s)")
     ax2.legend(loc="upper right", fontsize=8.5)
 
     # Panel 3: Pitch profile
-    ax3.plot(t, sim["pitch_deg"], color="#9467bd", lw=2.0, label="LM Pitch Angle from Vertical (deg)")
+    glow_line(ax3, t, sim["pitch_deg"], color=PALETTE["purple"], lw=2.0, label="LM Pitch Angle from Vertical (deg)")
     ax3.set_ylabel("Pitch (deg)")
     ax3.set_xlabel("Time Since Powered Descent Initiation, PDI (s)")
     ax3.legend(loc="upper right", fontsize=8.5)
 
     for ax in (ax1, ax2, ax3):
-        ax.axvline(317.0, color="#aa0000", ls=":", lw=1.1, alpha=0.7)
-        ax.axvline(t_p64, color="#ff7f0e", ls="--", lw=1.3)
-        ax.axvline(553.0, color="#aa0000", ls=":", lw=1.1, alpha=0.7)
-        ax.axvline(t_p66, color="#2ca02c", ls="--", lw=1.3)
+        ax.axvline(317.0, color=PALETTE["alarm"], ls=":", lw=1.2, alpha=0.85)
+        ax.axvline(t_p64, color=PALETTE["p64"], ls="--", lw=1.3)
+        ax.axvline(553.0, color=PALETTE["alarm"], ls=":", lw=1.2, alpha=0.85)
+        ax.axvline(t_p66, color=PALETTE["p66"], ls="--", lw=1.3)
 
-    ax3.text(312.0, 22.0, "1202 Alarm\n(PDI+5:17)", color="#aa0000", fontsize=8, ha="right")
-    ax3.text(t_p64 - 6.0, 62.0, "P64 High Gate\n(PDI+8:26)", color="#d95f02", fontsize=8.5, fontweight="bold", ha="right")
-    ax3.text(556.0, 32.0, "1201 Alarm\n(PDI+9:13)", color="#aa0000", fontsize=8, ha="left")
-    ax3.text(t_p66 + 5.0, 44.0, "P66 ROD\n(PDI+10:14)", color="#1b7837", fontsize=8.5, fontweight="bold")
+    ax3.text(312.0, 22.0, "1202 Alarm\n(PDI+5:17)", color=PALETTE["alarm"], fontsize=8, fontweight="bold", ha="right")
+    ax3.text(t_p64 - 6.0, 62.0, "P64 High Gate\n(PDI+8:26)", color=PALETTE["p64"], fontsize=8.5, fontweight="bold", ha="right")
+    ax3.text(556.0, 32.0, "1201 Alarm\n(PDI+9:13)", color=PALETTE["alarm"], fontsize=8, fontweight="bold", ha="left")
+    ax3.text(t_p66 + 5.0, 44.0, "P66 ROD\n(PDI+10:14)", color=PALETTE["p66"], fontsize=8.5, fontweight="bold")
 
     save(fig, "lm_01_throttle_vel_pitch")
 
@@ -615,67 +630,78 @@ def plot_dsky_nouns(sim: dict) -> None:
     # R1: ABVEL in N63 (left axis) and FUNNYDSP = LPD LOOKANGL in N64 (right axis)
     p63_mask = sim["phase"] == 63
     p64_mask = sim["phase"] == 64
-    ax1.plot(
+    glow_line(
+        ax1,
         t[p63_mask],
         sim["abvel"][p63_mask],
-        color="#1f77b4",
+        color=PALETTE["p63"],
         lw=2.2,
         label="N63 R1: Total Speed ABVEL (m/s, P63)",
     )
-    ax1.set_ylabel("N63 R1: ABVEL (m/s)", color="#1f77b4")
+    ax1.set_ylabel("N63 R1: ABVEL (m/s)", color=PALETTE["p63"])
+    ax1.tick_params(axis="y", labelcolor=PALETTE["p63"])
     ax1_r = ax1.twinx()
     ax1_r.spines["top"].set_visible(False)
-    ax1_r.plot(
+    ax1_r.spines["right"].set_visible(True)
+    ax1_r.spines["right"].set_color(PALETTE["spine"])
+    ax1_r.grid(False)
+    glow_line(
+        ax1_r,
         t[p64_mask],
         sim["lpd_deg"][p64_mask],
-        color="#ff7f0e",
+        color=PALETTE["p64"],
         lw=2.4,
         label="N64 R1: LPD Look Angle LOOKANGL (deg, P64)",
     )
-    ax1_r.set_ylabel("N64 R1: LPD Angle (deg)", color="#ff7f0e")
+    ax1_r.set_ylabel("N64 R1: LPD Angle (deg)", color=PALETTE["p64"])
+    ax1_r.tick_params(axis="y", labelcolor=PALETTE["p64"])
     ax1_r.set_ylim(0, 85)
     ax1.set_title("DSKY Displays During Powered Descent: V06N63 (P63), V06N64 (P64) & LR Incorporation")
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax1_r.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=8.5)
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="lower left", fontsize=8.5)
 
     # R2: HDOTDISP (Altitude Rate)
-    ax2.plot(t, sim["v_vert"], color="#2ca02c", lw=2.1, label="N63/N64/N60 R2: Altitude Rate HDOTDISP (m/s)")
-    ax2.axhline(0.0, color="#666666", lw=0.8)
+    glow_line(ax2, t, sim["v_vert"], color=PALETTE["dsky"], lw=2.1, label="N63/N64/N60 R2: Altitude Rate HDOTDISP (m/s)")
+    ax2.axhline(0.0, color=PALETTE["muted"], lw=0.8)
     ax2.set_ylabel("R2: HDOTDISP (m/s)")
     ax2.legend(loc="lower right", fontsize=8.5)
 
     # R3: HCALC1 / HCALC (Computed Altitude) and Noun 68 R3 DELTAH radar residual
-    ax3.plot(t, sim["alt_nav"] / 1000.0, color="#1f77b4", lw=2.1, label="N63/N64 R3: Navigated Altitude HCALC (km)")
+    glow_line(ax3, t, sim["alt_nav"] / 1000.0, color=PALETTE["lm"], lw=2.1, label="N63/N64 R3: Navigated Altitude HCALC (km)")
     ax3.plot(
         t,
         sim["alt_true"] / 1000.0,
-        color="#333333",
+        color=PALETTE["csm"],
         ls="--",
-        lw=1.4,
+        lw=1.5,
         label="True Lunar Altitude (km)",
     )
     ax3_r = ax3.twinx()
     ax3_r.spines["top"].set_visible(False)
+    ax3_r.spines["right"].set_visible(True)
+    ax3_r.spines["right"].set_color(PALETTE["spine"])
+    ax3_r.grid(False)
     lr_valid = sim["delta_h"] < 90_000.0
     ax3_r.plot(
         t[lr_valid],
         sim["delta_h"][lr_valid],
-        color="#d62728",
+        color=PALETTE["alarm"],
         lw=1.8,
-        alpha=0.85,
+        alpha=0.9,
         label="N68 R3: LR Residual DELTAH = h_LR - HCALC (m)",
     )
-    ax3_r.set_ylabel("N68 R3: DELTAH (m)", color="#d62728")
+    ax3_r.set_ylabel("N68 R3: DELTAH (m)", color=PALETTE["alarm"])
+    ax3_r.tick_params(axis="y", labelcolor=PALETTE["alarm"])
     ax3.set_ylabel("R3: HCALC (km)")
     ax3.set_xlabel("Time Since PDI (s)")
     l3a, lb3a = ax3.get_legend_handles_labels()
     l3b, lb3b = ax3_r.get_legend_handles_labels()
-    ax3.legend(l3a + l3b, lb3a + lb3b, loc="upper right", fontsize=8.5)
+    ax3.legend(l3a + l3b, lb3a + lb3b, loc="center left", fontsize=8.5)
 
     for ax in (ax1, ax2, ax3):
-        ax.axvline(t_p64, color="#ff7f0e", ls="--", lw=1.2)
-        ax.axvline(t_p66, color="#2ca02c", ls="--", lw=1.2)
+        ax.axvline(t_p64, color=PALETTE["p64"], ls="--", lw=1.2)
+        ax.axvline(t_p66, color=PALETTE["p66"], ls="--", lw=1.2)
 
     save(fig, "lm_01_dsky_n63_n64")
 

@@ -27,6 +27,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from common import (
+    PALETTE,
     src,
     step,
     save,
@@ -340,6 +341,7 @@ def plot_star_catalog_and_marks(catalog, code1, code2, marks1_sm, u1_sm_true, n0
         "Comanche055 STAR_TABLES.agc & SXTMARK.agc — P52 Star Sightings & Noun 05 Check",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Panel 1: Sky map (Right Ascension vs Declination) of decoded AGC catalog stars
@@ -352,7 +354,7 @@ def plot_star_catalog_and_marks(catalog, code1, code2, marks1_sm, u1_sm_true, n0
         decs.append(dec_deg)
         labels.append((code, entry["name"], ra_deg, dec_deg))
 
-    ax1.scatter(ras, decs, s=45, color="#2563eb", alpha=0.8, label="AGC CATLOG Stars (B-1 Scaled)")
+    ax1.scatter(ras, decs, s=45, color=PALETTE["csm"], alpha=0.85, label="AGC CATLOG Stars (B-1 Scaled)")
 
     for code, name, ra_d, dec_d in labels:
         if code in (code1, code2):
@@ -368,7 +370,7 @@ def plot_star_catalog_and_marks(catalog, code1, code2, marks1_sm, u1_sm_true, n0
             xytext=(dx_pt, dy_pt),
             textcoords="offset points",
             fontsize=7.5,
-            color="#334155",
+            color=PALETTE["muted"],
         )
 
     # Highlight the sighted star pair
@@ -383,36 +385,38 @@ def plot_star_catalog_and_marks(catalog, code1, code2, marks1_sm, u1_sm_true, n0
         [ra1, ra2],
         [dec1, dec2],
         "--",
-        color="#dc2626",
+        color=PALETTE["lm"],
         lw=1.8,
         label=f"P52 Sighted Pair (Sep = {n05_info[0]:.2f} deg)",
     )
     ax1.scatter(
         [ra1, ra2],
         [dec1, dec2],
-        s=130,
+        s=140,
         marker="*",
-        color="#dc2626",
+        color=PALETTE["lm"],
         zorder=5,
         label=f"Star #{code1} ({s1['name']}) & Star #{code2} ({s2['name']})",
     )
     ax1.annotate(
         f"Star #{code1} ({s1['name']})\nOctal {s1['octal']}",
         xy=(ra1, dec1),
-        xytext=(ra1 + 14, dec1 - 14),
-        arrowprops=dict(arrowstyle="->", color="#dc2626", lw=1.2),
+        xytext=(ra1 + 28, dec1 - 12),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["lm"], lw=1.2),
         fontsize=8.5,
         fontweight="bold",
-        color="#b91c1c",
+        color=PALETTE["lm"],
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["lm"], alpha=0.9),
     )
     ax1.annotate(
         f"Star #{code2} ({s2['name']})\nOctal {s2['octal']}",
         xy=(ra2, dec2),
         xytext=(ra2 - 75, dec2 + 10),
-        arrowprops=dict(arrowstyle="->", color="#dc2626", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["lm"], lw=1.2),
         fontsize=8.5,
         fontweight="bold",
-        color="#b91c1c",
+        color=PALETTE["lm"],
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["lm"], alpha=0.9),
     )
 
     ax1.set_xlim(0, 365)
@@ -436,31 +440,31 @@ def plot_star_catalog_and_marks(catalog, code1, code2, marks1_sm, u1_sm_true, n0
     # Draw reticle crosshairs and 10 / 20 arcsec rings
     for rad_as, ls in [(10.0, "--"), (20.0, ":")]:
         th = np.linspace(0, 2 * math.pi, 120)
-        ax2.plot(rad_as * np.cos(th), rad_as * np.sin(th), ls=ls, color="#94a3b8", lw=1.0)
+        ax2.plot(rad_as * np.cos(th), rad_as * np.sin(th), ls=ls, color=PALETTE["muted"], lw=1.0, alpha=0.7)
 
-    ax2.axhline(0.0, color="#64748b", lw=0.8)
-    ax2.axvline(0.0, color="#64748b", lw=0.8)
+    ax2.axhline(0.0, color=PALETTE["muted"], lw=0.8, alpha=0.6)
+    ax2.axvline(0.0, color=PALETTE["muted"], lw=0.8, alpha=0.6)
     ax2.scatter(
         d_az_arcsec,
         d_el_arcsec,
         s=65,
-        color="#2563eb",
+        color=PALETTE["csm"],
         zorder=4,
         label="5 Individual SXT Marks (MARKRUPT)",
     )
     for idx, (x_as, y_as) in enumerate(zip(d_az_arcsec, d_el_arcsec), start=1):
-        ax2.annotate(f"M{idx}", (x_as, y_as), xytext=(4, 4), textcoords="offset points", fontsize=8)
+        ax2.annotate(f"M{idx}", (x_as, y_as), xytext=(4, 4), textcoords="offset points", fontsize=8, color=PALETTE["text"])
 
     ax2.plot(
         avg_az,
         avg_el,
         "P",
-        color="#dc2626",
+        color=PALETTE["lm"],
         ms=10,
         label=f"S52.2 Averaged Centroid ({math.hypot(avg_az, avg_el):.1f} arcsec)",
         zorder=5,
     )
-    ax2.plot(0.0, 0.0, "+", color="#0f766e", ms=12, mew=2, label="True Star Line of Sight")
+    ax2.plot(0.0, 0.0, "+", color=PALETTE["dsky"], ms=12, mew=2, label="True Star Line of Sight")
 
     ang_cat, ang_sm, diff_deg, dsky_n05 = n05_info
     n05_box = (
@@ -477,7 +481,8 @@ def plot_star_catalog_and_marks(catalog, code1, code2, marks1_sm, u1_sm_true, n0
         transform=ax2.transAxes,
         fontsize=8.2,
         family="monospace",
-        bbox=dict(boxstyle="round,pad=0.4", facecolor="#f8fafc", edgecolor="#cbd5e1"),
+        color=PALETTE["text"],
+        bbox=dict(boxstyle="round,pad=0.4", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["spine"], alpha=0.92),
     )
 
     ax2.set_xlim(-28, 28)
@@ -505,16 +510,22 @@ def plot_imu_alignment_axes(
         "Comanche055 INFLIGHT_ALIGNMENT_ROUTINES.agc — AXISGEN Triad & CALCGTA (Noun 93)",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Panel 1: 3D view of REFSMMAT axes, exaggerated drifted SM axes, and star vectors
     ax1 = fig.add_subplot(1, 2, 1, projection="3d")
+    ax1.set_facecolor(PALETTE["ax_bg"])
+    for pane in (ax1.xaxis.pane, ax1.yaxis.pane, ax1.zaxis.pane):
+        pane.set_facecolor((0.075, 0.102, 0.149, 0.85))
+        pane.set_edgecolor(PALETTE["spine"])
+    ax1.tick_params(colors=PALETTE["muted"], labelsize=8)
 
     # Exaggerate the visual drift angle by 12x on the 3D quiver plot so the pre-alignment
     # offset is clearly visible to the naked eye (annotated on plot)
     r_vis_drift = euler_xyz_matrix(np.radians(drift_deg_true * 12.0))
     axis_names = ["X_SM", "Y_SM", "Z_SM"]
-    colors_ref = ["#dc2626", "#059669", "#2563eb"]
+    colors_ref = [PALETTE["alarm"], PALETTE["dsky"], PALETTE["csm"]]
 
     for i in range(3):
         e_axis = np.zeros(3)
@@ -553,7 +564,7 @@ def plot_imu_alignment_axes(
 
     # Plot the two catalog star vectors used by AXISGEN
     for idx, (u_st, st_lbl, st_col) in enumerate(
-        [(u1_ref, "Star #15 (Sirius)", "#d97706"), (u2_ref, "Star #22 (Regulus)", "#7c3aed")]
+        [(u1_ref, "Star #15 (Sirius)", PALETTE["lm"]), (u2_ref, "Star #22 (Regulus)", PALETTE["purple"])]
     ):
         ax1.quiver(
             0, 0, 0,
@@ -567,9 +578,9 @@ def plot_imu_alignment_axes(
     ax1.set_xlim([-1.1, 1.1])
     ax1.set_ylim([-1.1, 1.1])
     ax1.set_zlim([-1.1, 1.1])
-    ax1.set_xlabel("X_REF")
-    ax1.set_ylabel("Y_REF")
-    ax1.set_zlabel("Z_REF")
+    ax1.set_xlabel("X_REF", color=PALETTE["text"])
+    ax1.set_ylabel("Y_REF", color=PALETTE["text"])
+    ax1.set_zlabel("Z_REF", color=PALETTE["text"])
     ax1.set_title("3D Stable Member Axes & Sighted Star Vectors")
     ax1.view_init(elev=22, azim=38)
     ax1.legend(loc="upper left", fontsize=7.8)
@@ -584,21 +595,22 @@ def plot_imu_alignment_axes(
         x_pos - width / 2,
         drift_deg_true,
         width,
-        color="#2563eb",
-        alpha=0.85,
+        color=PALETTE["csm"],
+        alpha=0.88,
+        edgecolor="none",
         label="True IMU Platform Drift (deg)",
     )
     ax2.bar(
         x_pos + width / 2,
         torquing_deg_est,
         width,
-        color="#d97706",
-        alpha=0.85,
+        color=PALETTE["lm"],
+        alpha=0.88,
+        edgecolor="none",
         label="CALCGTA Computed Torquing Angle (deg)",
     )
 
     for i in range(3):
-        y_top = max(abs(drift_deg_true[i]), abs(torquing_deg_est[i]))
         y_pos = drift_deg_true[i] + math.copysign(0.08, drift_deg_true[i])
         ax2.text(
             x_pos[i],
@@ -608,10 +620,10 @@ def plot_imu_alignment_axes(
             va="bottom" if drift_deg_true[i] >= 0 else "top",
             fontsize=8.5,
             fontweight="bold",
-            color="#0f766e",
+            color=PALETTE["dsky"],
         )
 
-    ax2.axhline(0.0, color="#475569", lw=1.0)
+    ax2.axhline(0.0, color=PALETTE["muted"], lw=1.0)
     ax2.set_xticks(x_pos)
     ax2.set_xticklabels(axes_labels)
     ax2.set_ylabel("Angle (degrees)")
@@ -635,7 +647,8 @@ def plot_imu_alignment_axes(
         transform=ax2.transAxes,
         fontsize=8.5,
         family="monospace",
-        bbox=dict(boxstyle="round,pad=0.4", facecolor="#f8fafc", edgecolor="#cbd5e1"),
+        color=PALETTE["text"],
+        bbox=dict(boxstyle="round,pad=0.4", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["spine"], alpha=0.92),
     )
 
     fig.tight_layout()

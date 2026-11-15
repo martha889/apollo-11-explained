@@ -20,7 +20,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, Rectangle
 
-from common import save, src, step
+from common import PALETTE, save, src, step
 
 # 5-bit keycodes from `src("Luminary099/PINBALL_GAME_BUTTONS_AND_LIGHTS.agc", "CHARIN")`
 KEYCODES_OCTAL = {
@@ -285,35 +285,35 @@ def _draw_single_dsky(ax: plt.Axes, dsky: DSKYModel, subtitle: str, r_notes: tup
     bezel = FancyBboxPatch(
         (0.2, 0.2), 9.6, 11.4,
         boxstyle="round,pad=0.1,rounding_size=0.3",
-        facecolor="#374151", edgecolor="#111827", linewidth=2.2
+        facecolor=PALETTE["panel_bg"], edgecolor=PALETTE["grid"], linewidth=2.2
     )
     ax.add_patch(bezel)
-    ax.text(5.0, 11.85, subtitle, ha="center", va="center", fontsize=10.5, fontweight="bold", color="#111827")
+    ax.text(5.0, 11.88, subtitle, ha="center", va="center", fontsize=10.5, fontweight="bold", color=PALETTE["text"])
 
     # Left-top Warning Lamp Matrix (2 columns x 6 rows)
     lamp_bg = FancyBboxPatch(
         (0.55, 4.4), 4.1, 6.8,
         boxstyle="round,pad=0.05,rounding_size=0.15",
-        facecolor="#1f2937", edgecolor="#4b5563", linewidth=1.4
+        facecolor=PALETTE["ax_bg"], edgecolor=PALETTE["grid"], linewidth=1.4
     )
     ax.add_patch(lamp_bg)
 
     lamp_pairs = [
-        ("UPLINK ACTY", "TEMP", "#f9fafb", "#f59e0b"),
-        ("NO ATT", "GIMBAL LOCK", "#f9fafb", "#f59e0b"),
-        ("STBY", "PROG", "#f9fafb", "#f59e0b"),
-        ("KEY REL", "RESTART", "#f9fafb", "#f59e0b"),
-        ("OPR ERR", "TRACKER", "#f9fafb", "#f59e0b"),
-        ("ALT", "VEL", "#f9fafb", "#f59e0b"),
+        ("UPLINK ACTY", "TEMP", PALETTE["text"], PALETTE["lm"]),
+        ("NO ATT", "GIMBAL LOCK", PALETTE["text"], PALETTE["lm"]),
+        ("STBY", "PROG", PALETTE["text"], PALETTE["lm"]),
+        ("KEY REL", "RESTART", PALETTE["text"], PALETTE["lm"]),
+        ("OPR ERR", "TRACKER", PALETTE["text"], PALETTE["lm"]),
+        ("ALT", "VEL", PALETTE["text"], PALETTE["lm"]),
     ]
     for row_i, (l_name, r_name, l_col, r_col) in enumerate(lamp_pairs):
         y = 10.15 - row_i * 1.05
         for col_i, (lname, active_col) in enumerate([(l_name, l_col), (r_name, r_col)]):
             x = 0.75 + col_i * 1.95
             is_on = dsky.lamps.get(lname, False)
-            face = active_col if is_on else "#374151"
-            text_col = "#111827" if is_on else "#9ca3af"
-            edge = "#ffffff" if is_on else "#4b5563"
+            face = active_col if is_on else "#1e2736"
+            text_col = PALETTE["fig_bg"] if is_on else PALETTE["muted"]
+            edge = PALETTE["text"] if is_on else PALETTE["grid"]
             rect = FancyBboxPatch(
                 (x, y), 1.75, 0.80,
                 boxstyle="round,pad=0.02,rounding_size=0.08",
@@ -327,51 +327,51 @@ def _draw_single_dsky(ax: plt.Axes, dsky: DSKYModel, subtitle: str, r_notes: tup
     el_bg = FancyBboxPatch(
         (4.95, 4.4), 4.5, 6.8,
         boxstyle="round,pad=0.05,rounding_size=0.15",
-        facecolor="#051b11", edgecolor="#4b5563", linewidth=1.6
+        facecolor="#07160f", edgecolor=PALETTE["grid"], linewidth=1.6
     )
     ax.add_patch(el_bg)
 
     # COMP ACTY green square + PROG
-    ca_face = "#22c55e" if dsky.comp_acty else "#143322"
+    ca_face = PALETTE["dsky"] if dsky.comp_acty else "#142a1e"
     ca_box = FancyBboxPatch(
         (5.25, 9.75), 1.35, 1.05,
         boxstyle="round,pad=0.02,rounding_size=0.06",
-        facecolor=ca_face, edgecolor="#16a34a" if dsky.comp_acty else "#1f2937", lw=1.2
+        facecolor=ca_face, edgecolor=PALETTE["dsky"] if dsky.comp_acty else "#1f3a2c", lw=1.2
     )
     ax.add_patch(ca_box)
     ax.text(5.925, 10.27, "COMP\nACTY", ha="center", va="center",
-            fontsize=7.8, fontweight="bold", color="#052e16" if dsky.comp_acty else "#2d5a40")
+            fontsize=7.8, fontweight="bold", color="#07160f" if dsky.comp_acty else "#3c6e52")
 
-    ax.text(8.35, 10.88, "PROG", ha="center", va="center", fontsize=8, fontweight="bold", color="#86efac")
-    prog_box = Rectangle((7.65, 9.75), 1.4, 0.90, facecolor="#03110a", edgecolor="#15803d", lw=1.1)
+    ax.text(8.35, 10.88, "PROG", ha="center", va="center", fontsize=8, fontweight="bold", color=PALETTE["dsky"])
+    prog_box = Rectangle((7.65, 9.75), 1.4, 0.90, facecolor="#040d09", edgecolor="#235c3a", lw=1.1)
     ax.add_patch(prog_box)
     ax.text(8.35, 10.20, dsky.prog, ha="center", va="center",
-            fontsize=17, fontweight="bold", family="monospace", color="#4ade80")
+            fontsize=17, fontweight="bold", family="monospace", color=PALETTE["dsky"])
 
     # VERB and NOUN
-    vn_edge = "#facc15" if dsky.vn_flash else "#15803d"
-    ax.text(5.92, 9.35, "VERB", ha="center", va="center", fontsize=8, fontweight="bold", color="#86efac")
-    vb_box = Rectangle((5.22, 8.25), 1.4, 0.90, facecolor="#03110a", edgecolor=vn_edge, lw=1.2)
+    vn_edge = PALETTE["lm"] if dsky.vn_flash else "#235c3a"
+    ax.text(5.92, 9.35, "VERB", ha="center", va="center", fontsize=8, fontweight="bold", color=PALETTE["dsky"])
+    vb_box = Rectangle((5.22, 8.25), 1.4, 0.90, facecolor="#040d09", edgecolor=vn_edge, lw=1.2)
     ax.add_patch(vb_box)
     ax.text(5.92, 8.70, dsky.verb, ha="center", va="center",
-            fontsize=17, fontweight="bold", family="monospace", color="#4ade80")
+            fontsize=17, fontweight="bold", family="monospace", color=PALETTE["dsky"])
 
-    ax.text(8.35, 9.35, "NOUN", ha="center", va="center", fontsize=8, fontweight="bold", color="#86efac")
-    nn_box = Rectangle((7.65, 8.25), 1.4, 0.90, facecolor="#03110a", edgecolor=vn_edge, lw=1.2)
+    ax.text(8.35, 9.35, "NOUN", ha="center", va="center", fontsize=8, fontweight="bold", color=PALETTE["dsky"])
+    nn_box = Rectangle((7.65, 8.25), 1.4, 0.90, facecolor="#040d09", edgecolor=vn_edge, lw=1.2)
     ax.add_patch(nn_box)
     ax.text(8.35, 8.70, dsky.noun, ha="center", va="center",
-            fontsize=17, fontweight="bold", family="monospace", color="#4ade80")
+            fontsize=17, fontweight="bold", family="monospace", color=PALETTE["dsky"])
 
     # R1, R2, R3 5-digit signed registers
     for idx, (reg_val, note) in enumerate(zip([dsky.r1, dsky.r2, dsky.r3], r_notes)):
         y_reg = 6.95 - idx * 1.18
-        ax.plot([5.15, 9.25], [y_reg + 0.96, y_reg + 0.96], color="#15803d", lw=0.8)
-        r_box = Rectangle((5.20, y_reg + 0.12), 3.95, 0.76, facecolor="#03110a", edgecolor="#14532d", lw=1.0)
+        ax.plot([5.15, 9.25], [y_reg + 0.96, y_reg + 0.96], color="#235c3a", lw=0.8)
+        r_box = Rectangle((5.20, y_reg + 0.12), 3.95, 0.76, facecolor="#040d09", edgecolor="#1b462c", lw=1.0)
         ax.add_patch(r_box)
         ax.text(7.18, y_reg + 0.50, reg_val, ha="center", va="center",
-                fontsize=16.5, fontweight="bold", family="monospace", color="#4ade80")
+                fontsize=16.5, fontweight="bold", family="monospace", color=PALETTE["dsky"])
         ax.text(7.18, y_reg - 0.04, note, ha="center", va="center",
-                fontsize=7.2, color="#a7f3d0", family="monospace")
+                fontsize=7.2, color="#73c28a", family="monospace")
 
     # Bottom 19-button Keypad (7 columns)
     keypad_cols = [
@@ -393,13 +393,13 @@ def _draw_single_dsky(ax: plt.Axes, dsky: DSKYModel, subtitle: str, r_notes: tup
             k_box = FancyBboxPatch(
                 (x, y), 1.12, 0.95,
                 boxstyle="round,pad=0.02,rounding_size=0.08",
-                facecolor="#1e3a8a" if was_pressed else "#111827",
-                edgecolor="#60a5fa" if was_pressed else "#6b7280",
+                facecolor="#1b3556" if was_pressed else PALETTE["ax_bg"],
+                edgecolor=PALETTE["csm"] if was_pressed else PALETTE["grid"],
                 linewidth=1.8 if was_pressed else 1.0
             )
             ax.add_patch(k_box)
             ax.text(x + 0.56, y + 0.475, kname, ha="center", va="center",
-                    fontsize=7.8, fontweight="bold", color="#ffffff")
+                    fontsize=7.8, fontweight="bold", color=PALETTE["csm"] if was_pressed else PALETTE["text"])
 
 
 def plot_dsky_panels(dsky_v16n68: DSKYModel, dsky_1202: DSKYModel) -> plt.Figure:
@@ -428,7 +428,7 @@ def plot_dsky_panels(dsky_v16n68: DSKYModel, dsky_1202: DSKYModel) -> plt.Figure
     fig.suptitle(
         "Apollo 11 Lunar Module DSKY (`PINBALL_GAME_BUTTONS_AND_LIGHTS.agc`): "
         "P63 Monitoring & 1202 Alarm",
-        fontsize=12.5, fontweight="bold", y=0.98
+        fontsize=12.5, fontweight="bold", y=0.98, color=PALETTE["text"]
     )
     save(fig, "agc_03_dsky_panels")
     return fig
@@ -438,9 +438,9 @@ def plot_reference_table() -> plt.Figure:
     """Render a clean visual reference sheet of key Apollo 11 Programs, Verbs, and Nouns."""
     fig, axes = plt.subplots(3, 1, figsize=(12.4, 8.0))
     sections = [
-        ("Key Apollo 11 Programs (Major Modes — `V37 ENTR xx ENTR`)", APOLLO11_REFERENCE["programs"], "#1e3a8a"),
-        ("Key PINBALL Verbs (`VERB xx` — Action to Take)", APOLLO11_REFERENCE["verbs"], "#047857"),
-        ("Key PINBALL Nouns (`NOUN xx` — Registers & Scale Formatting)", APOLLO11_REFERENCE["nouns"], "#b45309"),
+        ("Key Apollo 11 Programs (Major Modes — `V37 ENTR xx ENTR`)", APOLLO11_REFERENCE["programs"], PALETTE["csm"]),
+        ("Key PINBALL Verbs (`VERB xx` — Action to Take)", APOLLO11_REFERENCE["verbs"], PALETTE["dsky"]),
+        ("Key PINBALL Nouns (`NOUN xx` — Registers & Scale Formatting)", APOLLO11_REFERENCE["nouns"], PALETTE["lm"]),
     ]
 
     for ax, (title, items, hdr_color) in zip(axes, sections):
@@ -453,16 +453,16 @@ def plot_reference_table() -> plt.Figure:
 
         for i, (code, name, desc) in enumerate(items):
             y = n - 1 - i
-            bg = "#f8fafc" if i % 2 == 0 else "#ffffff"
+            bg = "#161f2e" if i % 2 == 0 else PALETTE["ax_bg"]
             ax.add_patch(Rectangle((0.5, y - 0.38), 99.0, 0.82, facecolor=bg, edgecolor="none"))
             ax.text(1.5, y, code, fontsize=8.5, fontweight="bold", family="monospace",
                     color=hdr_color, va="center")
-            ax.text(11.5, y, name, fontsize=8.5, fontweight="bold", color="#111827", va="center")
-            ax.text(40.0, y, desc, fontsize=8.2, color="#374151", va="center")
+            ax.text(11.5, y, name, fontsize=8.5, fontweight="bold", color=PALETTE["text"], va="center")
+            ax.text(40.0, y, desc, fontsize=8.2, color=PALETTE["muted"], va="center")
 
     fig.suptitle(
         "Apollo 11 DSKY Quick Reference (`ASSEMBLY_AND_OPERATION_INFORMATION.agc` & `PINBALL_NOUN_TABLES.agc`)",
-        fontsize=12, fontweight="bold"
+        fontsize=12, fontweight="bold", color=PALETTE["text"]
     )
     save(fig, "agc_03_verbs_nouns_programs")
     return fig

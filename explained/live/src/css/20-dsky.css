@@ -1,0 +1,98 @@
+/* DSKYs */
+.dskys { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 6px 10px 8px !important; }
+.dsky-card { min-width: 0; display: flex; flex-direction: column; gap: 4px; container-type: inline-size; }
+.dsky-title { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; white-space: nowrap; min-width: 0; }
+.dsky-title h3 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+.dsky-title .sw { color: var(--muted); font-size: 11px; font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; }
+.badge { font-family: var(--font-display); font-weight: 600; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted); border-radius: 3px; padding: 0 6px; }
+.dsky-card.active .badge { border-color: var(--amber); color: var(--amber); }
+.dsky { position: relative; background: linear-gradient(180deg, #41444a, var(--dsky-body) 40%, #34373c); border: 2px solid var(--dsky-edge); border-radius: 6px; padding: min(2.2cqi, 7px) min(2.6cqi, 8px); display: grid; grid-template-columns: 40% 1fr; gap: min(2.2cqi, 7px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -2px 0 rgba(0,0,0,0.35), inset 1px 0 0 rgba(255,255,255,0.04), 0 2px 8px rgba(0,0,0,0.4); }
+.dsky-card.active .dsky { border-color: var(--amber-dim); }
+.lamps { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: min(1.2cqi, 4px); background: var(--dsky-edge); padding: min(1.3cqi, 4px); border-radius: 3px; }
+.lamp { box-shadow: inset 0 1px 1px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; text-align: center; background: var(--dsky-lamp-off); color: var(--dsky-text-off); font-family: var(--font-display); font-weight: 600; font-size: min(3cqi, 9.5px); line-height: 1; letter-spacing: 0.04em; border-radius: 1.5px; padding: min(0.5cqi, 2px) min(0.3cqi, 1.5px); min-height: min(5.4cqi, 17px); }
+.lamp.blank { color: transparent; }
+.lamp.on.white { background: var(--lamp-white); color: #23252a; box-shadow: 0 0 6px rgba(238, 240, 230, 0.45); }
+.lamp.on.amber { background: var(--amber); color: #2b1d05; box-shadow: 0 0 8px rgba(242, 177, 60, 0.55); }
+.el { background: var(--el-bg); border-radius: 3px; padding: min(1.5cqi, 5px) min(1.8cqi, 6px); display: grid; grid-template-columns: 1fr 1fr; gap: min(1cqi, 3px) min(1.6cqi, 5px); align-content: start; }
+.el .cell { display: flex; flex-direction: column; align-items: center; gap: min(0.4cqi, 1.5px); }
+.el .tag { background: var(--el); color: var(--el-bg); font-family: var(--font-display); font-weight: 700; font-size: min(2.6cqi, 8.5px); letter-spacing: 0.08em; padding: min(0.15cqi, 0.5px) min(1cqi, 3.5px); border-radius: 1px; line-height: 1.15; }
+.el .tag.off { background: rgba(155, 242, 138, 0.1); color: rgba(155, 242, 138, 0.25); }
+.el .compacty { grid-row: span 1; width: 100%; height: 100%; min-height: min(7.4cqi, 23px); display: flex; align-items: center; justify-content: center; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: min(2.6cqi, 8.5px); line-height: 1.1; letter-spacing: 0.06em; border-radius: 1px; background: rgba(155, 242, 138, 0.08); color: rgba(155, 242, 138, 0.2); }
+.el .compacty.on { background: var(--el); color: var(--el-bg); }
+.el .reg { grid-column: 1 / -1; display: flex; flex-direction: column; gap: min(0.5cqi, 2px); }
+.el .bar { height: min(0.5cqi, 1.5px); background: rgba(155, 242, 138, 0.25); border-radius: 1px; }
+.digits { display: flex; justify-content: flex-end; gap: min(0.45cqi, 1.5px); }
+.digits svg { width: min(4.8cqi, 15px); height: min(7.4cqi, 23px); }
+.cell .digits svg { width: min(4.8cqi, 15px); }
+.seg { fill: var(--el-dim); }
+.seg.on { fill: var(--el); filter: drop-shadow(0 0 1px rgba(155, 242, 138, 0.9)) drop-shadow(0 0 3.5px rgba(155, 242, 138, 0.5)); }
+.dsky.off .seg.on { fill: var(--el-dim); filter: none; }
+.dsky.off .tag { background: rgba(155, 242, 138, 0.1); color: rgba(155, 242, 138, 0.2); }
+.dsky.off .bar { background: rgba(155, 242, 138, 0.08); }
+.blink-hidden .seg.on { fill: var(--el-dim); filter: none; }
+.caption { color: var(--muted); font-size: 11.5px; line-height: 1.3; min-height: 2.6em; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.caption .src { display: inline-block; font-family: var(--font-display); font-weight: 600; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 2px; padding: 0 4px; margin-right: 6px; border: 1px solid var(--line); color: var(--muted); }
+.caption .src.sim { border-color: var(--el); color: var(--el); }
+.dsky-toggle { display: none; gap: 6px; }
+
+
+/* ---------- Motion & polish: DSKY ---------- */
+.dsky::after { /* glass reflection */
+  content: ""; position: absolute; inset: 0; border-radius: 4px; pointer-events: none; z-index: 2;
+  background: linear-gradient(115deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.02) 28%, transparent 42%, transparent 100%);
+}
+.dsky::before { /* alarm ring (opacity only) */
+  content: ""; position: absolute; inset: -2px; border-radius: 7px; pointer-events: none; z-index: 3;
+  border: 2px solid var(--alarm); box-shadow: 0 0 14px rgba(255,90,79,0.55), inset 0 0 12px rgba(255,90,79,0.25); opacity: 0;
+}
+.dsky-card.alarm-pulse .dsky::before { animation: alarmRing 1.05s ease-in-out 3 both; }
+@keyframes alarmRing { 0%, 100% { opacity: 0.95; border-color: var(--alarm); } 40% { opacity: 0.85; border-color: var(--amber); } 70% { opacity: 0.2; border-color: var(--alarm); } }
+.seg { transition: fill 160ms ease-out, filter 160ms ease-out; }
+.seg.on { transition-duration: 90ms; }
+.blink-hidden .seg, .blink-hidden .seg.on { transition-duration: 60ms; }
+.el { box-shadow: inset 0 0 18px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(155,242,138,0.05); }
+.el .tag, .el .bar, .el .compacty { transition: background-color 160ms ease-out, color 160ms ease-out; }
+.el .compacty.on { transition-duration: 60ms; box-shadow: 0 0 8px rgba(155,242,138,0.5); }
+.digits { transition: opacity 60ms linear; }
+.dsky.blanking .digits { opacity: 0; transition: none; }
+.dsky.flick-on .el { animation: flickOn 420ms steps(1, end) both; }
+.dsky.flick-off .el { animation: flickOff 320ms steps(1, end) both; }
+@keyframes flickOn { 0% { opacity: 0.1; } 16% { opacity: 0.9; } 28% { opacity: 0.2; } 44% { opacity: 1; } 58% { opacity: 0.55; } 100% { opacity: 1; } }
+@keyframes flickOff { 0% { opacity: 1; } 20% { opacity: 0.4; } 40% { opacity: 0.9; } 100% { opacity: 1; } }
+.dsky-card .badge { transition: color 220ms, border-color 220ms; }
+.dsky { transition: border-color 300ms; }
+.lamp { transition: background-color 160ms ease-out, color 160ms ease-out, box-shadow 200ms ease-out; }
+.lamp.on { transition-duration: 280ms, 280ms, 360ms; }
+.lamp.flashing { animation: lampFlash 520ms ease-in-out 6; }
+@keyframes lampFlash { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.caption { transition: opacity 200ms; }
+.caption.swap { animation: capIn 260ms var(--ease) both; }
+@keyframes capIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Interactive keypad (crew mode) ---------- */
+.dsky-keys { display: none; min-width: 0; }
+.dsky-keys.open { display: block; }
+.kbtoggle { margin: -7px 0 -7px auto; flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px 0 8px; background: var(--dsky-edge); color: var(--muted); border: 1px solid #1d1f22; border-radius: 3px; font-family: var(--font-display); font-weight: 600; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.07); }
+.kbtoggle:hover { color: var(--fg); }
+.kbtoggle[aria-expanded="true"] { color: var(--amber); border-color: var(--amber-dim); }
+.kbt-ico { width: 0; height: 0; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform 160ms; }
+.kbtoggle[aria-expanded="true"] .kbt-ico { transform: rotate(90deg); }
+.dsky-keyboard { display: none; grid-template-columns: minmax(0, 1fr) minmax(0, 5fr) minmax(0, 1fr); gap: 4px; background: linear-gradient(180deg, #34373c, var(--dsky-edge)); border: 2px solid var(--dsky-edge); border-radius: 6px; padding: 5px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.4); }
+.dsky-keys.open .dsky-keyboard { display: grid; }
+.dsky-card.active .dsky-keyboard { border-color: var(--amber-dim); }
+.kcol-side { display: grid; grid-auto-rows: 1fr; gap: 4px; min-width: 0; align-content: center; }
+.kgrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: minmax(28px, 1fr); gap: 4px; min-width: 0; }
+.kbtn { min-width: 0; min-height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; text-align: center; background: linear-gradient(180deg, #2b2d31, #1c1d20); color: var(--lamp-white); border: 1px solid #0f1012; border-radius: 3px; font-family: var(--font-display); font-weight: 700; font-size: 14px; line-height: 1; letter-spacing: 0.04em; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 0 #0b0b0d; text-shadow: 0 0 5px rgba(238,240,230,0.35); transition: transform 60ms, box-shadow 60ms, background-color 120ms; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.kbtn.word { font-size: 10.5px; letter-spacing: 0.02em; }
+.kbtn:hover { background: linear-gradient(180deg, #34363b, #232427); }
+.kbtn:active, .kbtn.kpress { transform: translateY(2px); box-shadow: inset 0 1px 3px rgba(0,0,0,0.7), 0 0 0 #0b0b0d; background: #17181a; color: var(--amber); text-shadow: 0 0 6px rgba(242,177,60,0.8); }
+.kbtn:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; z-index: 1; }
+.dsky.off ~ .dsky-keys .kbtn { opacity: 0.35; cursor: not-allowed; }
+/* wide layout: the keypad floats over the code panel below the caption, so the code listing keeps its height */
+@media (min-width: 961px) {
+  .dsky-keys { position: relative; }
+  .dsky-keyboard { position: absolute; left: 0; right: 0; top: 40px; z-index: 6; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 22px rgba(0,0,0,0.65); }
+}
+@media (min-width: 961px) {
+  .panel[aria-label="Guidance computers"] { overflow: visible; position: relative; z-index: 5; }
+}

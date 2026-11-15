@@ -23,7 +23,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 
-from common import save, src, step
+from common import PALETTE, glow_line, save, src, step
 
 MAX_CORESETS = 8   # Core Set 0 (running) + 7 background sets (NO.CORES DEC 7)
 MAX_VACS = 5       # VAC1USE .. VAC5USE (5 vector work areas of 44 words each)
@@ -442,13 +442,13 @@ def plot_gantt_timeline(agc: AGCSystem) -> plt.Figure:
     )
 
     job_Order = [
-        ("DAP_R10", "DAP & R10/R11 (PRIO 27)", "#7c3aed"),
-        ("LUNLAND", "LUNLAND Guidance (PRIO 21, Grp 3)", "#2563eb"),
-        ("SERVICER", "SERVICER Nav Loop (PRIO 20, Grp 5)", "#0284c7"),
-        ("P63DISPS", "P63/P64 Display (PRIO 14)", "#10b981"),
-        ("MON_V16N68", "V16 N68 Monitor (PRIO 10, Unprotected)", "#f59e0b"),
-        ("R52_AUTO", "R52 Background (PRIO 07, Unprotected)", "#f97316"),
-        ("DUMMYJOB", "DUMMYJOB Idle (Green Light OFF)", "#cbd5e1"),
+        ("DAP_R10", "DAP & R10/R11 (PRIO 27)", PALETTE["purple"]),
+        ("LUNLAND", "LUNLAND Guidance (PRIO 21, Grp 3)", PALETTE["csm"]),
+        ("SERVICER", "SERVICER Nav Loop (PRIO 20, Grp 5)", PALETTE["cyan"]),
+        ("P63DISPS", "P63/P64 Display (PRIO 14)", PALETTE["dsky"]),
+        ("MON_V16N68", "V16 N68 Monitor (PRIO 10, Unprotected)", PALETTE["lm"]),
+        ("R52_AUTO", "R52 Background (PRIO 07, Unprotected)", PALETTE["p66"]),
+        ("DUMMYJOB", "DUMMYJOB Idle (Green Light OFF)", "#2d3b52"),
     ]
     y_map = {key: idx for idx, (key, _, _) in enumerate(job_Order)}
     color_map = {key: col for key, _, col in job_Order}
@@ -456,7 +456,7 @@ def plot_gantt_timeline(agc: AGCSystem) -> plt.Figure:
     # Shade the RR CDU cycle-stealing region
     ax_gantt.axvspan(
         agc.rr_start_cs / 100.0, agc.history_t[-1],
-        color="#fee2e2", alpha=0.45,
+        color=PALETTE["alarm"], alpha=0.10,
         label="Rendezvous Radar CDU Pulses Stealing 15% CPU (t ≥ 2.0 s)"
     )
 
@@ -479,14 +479,14 @@ def plot_gantt_timeline(agc: AGCSystem) -> plt.Figure:
 
     # Mark 1202 Alarm & Software Restart events
     for r_idx, (t_alm, code, _) in enumerate(agc.alarm_events, start=1):
-        ax_gantt.axvline(t_alm, color="#dc2626", lw=2.2, ls="--")
+        ax_gantt.axvline(t_alm, color=PALETTE["alarm"], lw=2.2, ls="--")
         ax_gantt.annotate(
             f"BAILOUT OCT {code:05o}\n(8/8 Core Sets Full!)\n-> ENEMA Restart #{r_idx}\n"
             f"Drops PRIO 07/10/14,\nResumes SERVICER!",
             xy=(t_alm, 4.2), xytext=(t_alm - 2.65, 4.65),
-            arrowprops={"arrowstyle": "->", "color": "#dc2626", "lw": 1.5},
-            fontsize=8.2, fontweight="bold", color="#991b1b",
-            bbox={"boxstyle": "round,pad=0.3", "facecolor": "#fef2f2", "edgecolor": "#dc2626"}
+            arrowprops={"arrowstyle": "->", "color": PALETTE["alarm"], "lw": 1.5},
+            fontsize=8.2, fontweight="bold", color=PALETTE["alarm"],
+            bbox={"boxstyle": "round,pad=0.3", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["alarm"], "alpha": 0.92}
         )
 
     ax_gantt.set_yticks(range(len(job_Order)))
@@ -506,18 +506,18 @@ def plot_gantt_timeline(agc: AGCSystem) -> plt.Figure:
     t_grp5 = [t for t, grp, code, _ in agc.phaschng_events if grp == 5 and code > 0]
     t_grp3 = [t for t, grp, code, _ in agc.phaschng_events if grp == 3 and code > 0]
 
-    ax_events.scatter(t_readaccs, [2]*len(t_readaccs), marker="^", s=70, color="#0284c7",
+    ax_events.scatter(t_readaccs, [2]*len(t_readaccs), marker="^", s=70, color=PALETTE["cyan"],
                       label="T3RUPT: READACCS (2.0 s)")
-    ax_events.scatter(t_r10, [1]*len(t_r10), marker="|", s=55, color="#7c3aed",
+    ax_events.scatter(t_r10, [1]*len(t_r10), marker="|", s=55, color=PALETTE["purple"],
                       label="T3RUPT: R10,R11 (0.5 s)")
-    ax_events.scatter(t_mon, [0]*len(t_mon), marker="o", s=35, color="#f59e0b",
+    ax_events.scatter(t_mon, [0]*len(t_mon), marker="o", s=35, color=PALETTE["lm"],
                       label="T3RUPT: MON_V16N68 (1.0 s)")
-    ax_events.scatter(t_grp5, [2.35]*len(t_grp5), marker="D", s=40, color="#0369a1",
+    ax_events.scatter(t_grp5, [2.35]*len(t_grp5), marker="D", s=40, color=PALETTE["csm"],
                       label="PHASCHNG Grp 5 & Grp 3 Checkpoints")
-    ax_events.scatter(t_grp3, [2.35]*len(t_grp3), marker="D", s=40, color="#1d4ed8")
+    ax_events.scatter(t_grp3, [2.35]*len(t_grp3), marker="D", s=40, color=PALETTE["dsky"])
 
     for t_alm, code, _ in agc.alarm_events:
-        ax_events.axvline(t_alm, color="#dc2626", lw=2.0, ls="--")
+        ax_events.axvline(t_alm, color=PALETTE["alarm"], lw=2.0, ls="--")
 
     ax_events.set_yticks([0, 1, 2])
     ax_events.set_yticklabels(["Waitlist 1.0s", "Waitlist 0.5s", "Waitlist 2.0s\n+ PHASCHNG"], fontsize=8.5)
@@ -536,20 +536,20 @@ def plot_coreset_occupancy(
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(11.5, 6.4), sharex=True)
 
     # Top panel: Core Set Occupancy (1202 Alarm when reaching 8)
-    ax1.plot(agc_normal.history_t, agc_normal.history_cores_used,
-             color="#16a34a", lw=1.6, alpha=0.85, label="Normal Descent (0% RR steal, ~84% CPU)")
-    ax1.plot(agc_1202.history_t, agc_1202.history_cores_used,
-             color="#dc2626", lw=2.0, label="Apollo 11 Overload (15% RR CDU steal -> 1202 Alarm)")
-    ax1.axhline(MAX_CORESETS, color="#991b1b", ls=":", lw=1.5, label="Max Core Sets (8 = BAILOUT 01202)")
+    glow_line(ax1, agc_normal.history_t, agc_normal.history_cores_used,
+              color=PALETTE["dsky"], lw=1.6, label="Normal Descent (0% RR steal, ~84% CPU)")
+    glow_line(ax1, agc_1202.history_t, agc_1202.history_cores_used,
+              color=PALETTE["alarm"], lw=2.0, label="Apollo 11 Overload (15% RR CDU steal -> 1202 Alarm)")
+    ax1.axhline(MAX_CORESETS, color=PALETTE["alarm"], ls=":", lw=1.5, label="Max Core Sets (8 = BAILOUT 01202)")
 
     for t_alm, code, _ in agc_1202.alarm_events:
-        ax1.axvline(t_alm, color="#dc2626", ls="--", lw=1.6)
+        ax1.axvline(t_alm, color=PALETTE["alarm"], ls="--", lw=1.6)
         ax1.annotate(
             f"1202 ALARM (t={t_alm:.2f}s)\n0/8 Core Sets free\n-> Software Restart!",
             xy=(t_alm, MAX_CORESETS), xytext=(t_alm - 2.25, 5.5),
-            arrowprops={"arrowstyle": "->", "color": "#dc2626", "lw": 1.4},
-            fontsize=8.2, fontweight="bold", color="#991b1b",
-            bbox={"boxstyle": "round,pad=0.25", "facecolor": "#fef2f2", "edgecolor": "#dc2626"}
+            arrowprops={"arrowstyle": "->", "color": PALETTE["alarm"], "lw": 1.4},
+            fontsize=8.2, fontweight="bold", color=PALETTE["alarm"],
+            bbox={"boxstyle": "round,pad=0.25", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["alarm"], "alpha": 0.92}
         )
 
     ax1.set_ylabel("Active Core Sets (out of 8)")
@@ -561,21 +561,21 @@ def plot_coreset_occupancy(
     ax1.legend(loc="upper left", fontsize=8.5)
 
     # Bottom panel: VAC Area Occupancy (1201 Alarm when reaching 5)
-    ax2.plot(agc_normal.history_t, agc_normal.history_vacs_used,
-             color="#16a34a", lw=1.6, alpha=0.85, label="Normal VAC Occupancy (1–2 VACs used)")
-    ax2.plot(agc_1201.history_t, agc_1201.history_vacs_used,
-             color="#2563eb", lw=2.0, label="VAC-Heavy Display Load + 15% RR Steal -> 1201 Alarm")
-    ax2.axhline(MAX_VACS, color="#1e40af", ls=":", lw=1.5, label="Max VAC Areas (5 = BAILOUT 01201)")
+    glow_line(ax2, agc_normal.history_t, agc_normal.history_vacs_used,
+              color=PALETTE["dsky"], lw=1.6, label="Normal VAC Occupancy (1–2 VACs used)")
+    glow_line(ax2, agc_1201.history_t, agc_1201.history_vacs_used,
+              color=PALETTE["lm"], lw=2.0, label="VAC-Heavy Display Load + 15% RR Steal -> 1201 Alarm")
+    ax2.axhline(MAX_VACS, color=PALETTE["lm"], ls=":", lw=1.5, label="Max VAC Areas (5 = BAILOUT 01201)")
 
     for idx, (t_alm, code, _) in enumerate(agc_1201.alarm_events):
-        ax2.axvline(t_alm, color="#1d4ed8", ls="--", lw=1.6)
+        ax2.axvline(t_alm, color=PALETTE["lm"], ls="--", lw=1.6)
         y_box = 3.55 if idx % 2 == 0 else 2.15
         ax2.annotate(
             f"1201 ALARM (t={t_alm:.2f}s)\n0/5 VACs -> Restart",
             xy=(t_alm, MAX_VACS), xytext=(t_alm - 1.85, y_box),
-            arrowprops={"arrowstyle": "->", "color": "#1d4ed8", "lw": 1.3},
-            fontsize=7.8, fontweight="bold", color="#1e3a8a",
-            bbox={"boxstyle": "round,pad=0.22", "facecolor": "#eff6ff", "edgecolor": "#2563eb"}
+            arrowprops={"arrowstyle": "->", "color": PALETTE["lm"], "lw": 1.3},
+            fontsize=7.8, fontweight="bold", color=PALETTE["lm"],
+            bbox={"boxstyle": "round,pad=0.22", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["lm"], "alpha": 0.92}
         )
 
     ax2.set_ylabel("Active VAC Areas (out of 5)")

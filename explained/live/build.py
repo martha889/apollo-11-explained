@@ -61,6 +61,20 @@ def r1(a, nd=1):
     return [round(float(v), nd) for v in a]
 
 
+def tele(key, label, unit, get_s, v, nd=1, get_nd=1):
+    """One strip-chart series: own get array (GET s) and values; drops duplicate/non-increasing times."""
+    g = np.asarray(get_s, float)
+    v = np.asarray(v, float)
+    keep = np.ones(len(g), bool)
+    keep[1:] = np.diff(g) > 1e-6
+    return dict(key=key, label=label, unit=unit, get=r1(g[keep], get_nd), v=r1(v[keep], nd))
+
+
+def fpa_deg(v_up, v_horiz):
+    """Flight-path angle of the velocity above the local horizontal, degrees."""
+    return np.degrees(np.arctan2(v_up, v_horiz))
+
+
 # ---------------------------------------------------------------------------
 # Real timeline (Apollo 11 Mission Report, GET)
 # ---------------------------------------------------------------------------
@@ -190,6 +204,25 @@ def track_launch(dsky):
     tr = dict(frame="Altitude vs downrange from the launch pad", x_label="Downrange (km, approx.)", y_label="Altitude (km)",
               get=r1(t[idx]), x=r1(x[idx]), y=r1(s["alt_km"][idx], 2), v=r1(s["vi_m_s"][idx], 0),
               note="Saturn V climb from the P11 simulation (csm_01). Downrange is reconstructed from speed, approx.")
+    # inertial flight-path angle of the velocity above the local horizontal (sim output), aligned with tr["get"]
+    tr["fpa_deg"] = r1(s["gamma_deg"][idx], 1)
+    tr["telemetry"] = [
+        tele("speed", "Inertial speed", "m/s", t, s["vi_m_s"], 0),
+        tele("alt", "Altitude", "km", t, s["alt_km"], 2),
+        tele("hdot", "Altitude rate", "m/s", t, s["hdot_m_s"], 1),
+        tele("accel_g", "Sensed acceleration (modelled thrust, no gravity)", "g", t, s["sensed_g"], 2),
+    ]
+    # Stage boundaries exactly as modelled in csm_01.simulate_saturn_v_ascent (sim clock = GET during launch).
+    tr["stages"] = [
+        dict(id="ceco", get=135.0, label="S-IC centre engine cutoff (modelled)", approx=False),
+        dict(id="oeco", get=162.0, label="S-IC cutoff and separation", approx=False),
+        dict(id="s2-ign", get=162.0, label="S-II ignition (sim switches stage with no coast)", approx=True),
+        dict(id="let", get=198.0, label="Launch escape tower jettison (approx. 3 min 18 s)", approx=True),
+        dict(id="secoa", get=548.0, label="S-II cutoff and separation", approx=False),
+        dict(id="s4-ign", get=548.0, label="S-IVB ignition (sim switches stage with no coast)", approx=True),
+        dict(id="seco", get=700.0, label="S-IVB cutoff, parking orbit reached (sim clock)", approx=False),
+    ]
+    # max-q omitted: the simulation has no atmosphere or dynamic-pressure model.
     for i in range(0, len(t), 1):
         if t[i] % 2:
             continue
@@ -258,10 +291,20 @@ def track_cislunar_and_orbit(fr):
     tli_end = EV["tli"] + 347
     g_out = retime(t[out_m], [0, t_peri], [tli_end, EV["loi-1"]])
     g_ret = retime(t[ret_m], [t_peri, t[-1]], [EV["tei"] + 151, EI])
+    v_e = np.linalg.norm(data["v_earth"], axis=1)  # speed relative to Earth (inertial), m/s
+    RSPHERE = 64_373.76
+    d_out = dist_moon[out_m]
+    cross = np.nonzero((d_out[:-1] > RSPHERE) & (d_out[1:] <= RSPHERE))[0]
+    assert len(cross), "outbound leg never crosses the Moon's sphere of influence"
+    k = int(cross[0])
+    soi_get = float(g_out[k] + (g_out[k + 1] - g_out[k]) * (d_out[k] - RSPHERE) / (d_out[k] - d_out[k + 1]))
     cis = dict(frame="Earth-Moon rotating frame (Moon fixed on the right), km", earth=[0, 0], moon=[384_400, 0],
                r_earth=6378, r_moon=1737,
-               legs=[dict(id="outbound", get=r1(g_out), x=r1(xr[out_m], 0), y=r1(yr[out_m], 0)),
-                     dict(id="return", get=r1(g_ret), x=r1(xr[ret_m], 0), y=r1(yr[ret_m], 0))],
+               legs=[dict(id="outbound", get=r1(g_out), x=r1(xr[out_m], 0), y=r1(yr[out_m], 0),
+                           v=r1(v_e[out_m], 1)),
+                     dict(id="return", get=r1(g_ret), x=r1(xr[ret_m], 0), y=r1(yr[ret_m], 0),
+                           v=r1(v_e[ret_m], 1))],
+               soi_get=round(soi_get, 1), soi_radius_km=RSPHERE,
                note="Shape from the free-return simulation (csm_02), retimed to the real GET. "
                     "Apollo 11 left the free-return path after MCC-2 and returned from lunar orbit, so the real path differs in detail.")
 
@@ -306,6 +349,42 @@ def periodic_pos(orbit, g):
     k = ((g - orbit["epoch"]) / orbit["period"]) % 1.0
     i = int(k * len(orbit["x"])) % len(orbit["x"])
     return orbit["x"][i], orbit["y"][i]
+
+
+def csm_pos(seg_csm, g):
+    """CSM position [x, y] km (Moon-centred) at GET g from the segment list, or None outside every segment."""
+    for sg in seg_csm:
+        if sg["kind"] == "arc":
+            if sg["get"][0] <= g <= sg["get"][-1]:
+                return [float(np.interp(g, sg["get"], sg["x"])), float(np.interp(g, sg["get"], sg["y"]))]
+        elif sg["get_start"] <= g < sg["get_end"]:
+            return list(periodic_pos(sg, g))
+    return None
+
+
+def los_windows(seg_csm, ed, passes, step=10.0, r_moon=1737.4):
+    """Windows when the CSM is behind the Moon as seen along earth_dir (cylinder shadow test).
+    For each (g_from, g_to, g_ref): the contiguous behind-the-Moon window containing g_ref, else any window in range."""
+    out = []
+    for g_from, g_to, g_ref in passes:
+        gs = np.arange(g_from, g_to, step)
+        beh = []
+        for g in gs:
+            p = csm_pos(seg_csm, float(g))
+            beh.append(p is not None and p[0] * ed[0] + p[1] * ed[1] < 0 and abs(p[0] * ed[1] - p[1] * ed[0]) < r_moon)
+        wins, i = [], 0
+        while i < len(gs):
+            if beh[i]:
+                j = i
+                while j + 1 < len(gs) and beh[j + 1]:
+                    j += 1
+                wins.append((float(gs[i]), float(gs[j])))
+                i = j + 1
+            else:
+                i += 1
+        hit = [w for w in wins if w[0] <= g_ref <= w[1]] or wins
+        out += [dict(get0=round(a, 1), get1=round(b, 1), approx=True) for a, b in hit]
+    return out
 
 
 def track_lunar(dsky):
@@ -374,13 +453,24 @@ def track_lunar(dsky):
               dict(kind="surface", get_start=PDI, get_end=LIFTOFF + 494,
                    x=round(1737.4 * math.cos(land_ang), 1), y=round(1737.4 * math.sin(land_ang), 1)),
               dict(kind="follow", get_start=LIFTOFF + 494, get_end=EV["lm-jettison"])]
+    # Direction to the Earth in this frame (approx.): chosen so the LOI-1 burn point is behind the Moon.
+    pm = csm_pos(seg_csm, loi + burn_dur / 2)
+    ed = -np.array(pm) / math.hypot(*pm)
+    earth_dir = [round(float(ed[0]), 4), round(float(ed[1]), 4)]
+    los = los_windows(seg_csm, ed, [(loi - 1800, loi + burn_dur + 2 * T1 / 2, loi + burn_dur / 2),
+                                    (EV["tei"] - 3600, EV["tei"] + 151 + 1800, EV["tei"] + 75)])
+    dt_h = hist["t"]
     lun = dict(frame="Moon-centred inertial, km", r_moon=1737.4, csm=seg_csm, lm=seg_lm,
                burns=[dict(id="loi-1", get0=loi, get1=round(loi + burn_dur, 1)),
                       dict(id="loi-2", get0=EV["loi-2"], get1=EV["loi-2"] + 17),
                       dict(id="doi", get0=EV["doi"], get1=EV["doi"] + 30),
                       dict(id="tei", get0=EV["tei"], get1=EV["tei"] + 151)],
                site=dict(x=round(1737.4 * math.cos(land_ang), 1), y=round(1737.4 * math.sin(land_ang), 1)),
-               note="LOI-1 from the P40 simulation (csm_04). Later orbits are Kepler ellipses with Mission Report apsides "
+                earth_dir=earth_dir, los=los,
+                telemetry=[tele("loi1_vgo", "LOI-1 velocity to go", "m/s", loi + dt_h, hist["vgo_mag"], 1),
+                           tele("loi1_dv", "LOI-1 accumulated delta-v", "m/s", loi + dt_h, hist["dv_total"], 1),
+                           tele("loi1_tgo", "LOI-1 time to go", "s", loi + dt_h, hist["tgo"], 1)],
+                note="LOI-1 from the P40 simulation (csm_04). Later orbits are Kepler ellipses with Mission Report apsides "
                     "(approx.); the Moon's rotation and orbit-plane details are left out.")
 
     # LOI-1 DSKY: V06N40 before ignition (time from ignition) and during the burn (time to cutoff)
@@ -411,6 +501,29 @@ def track_descent(dsky):
               note="Powered descent from the P63/P64/P66 simulation (lm_01).")
     valid = np.nonzero(s["delta_h"] < 90_000.0)[0]
     first_lock = int(valid[0]) if len(valid) else len(t)
+    tr["fpa_deg"] = r1(fpa_deg(s["v_vert"], s["v_horiz"]), 1)
+    vm = valid  # landing radar delta-h only where the sim reports a valid value (99999 = no data)
+    tr["telemetry"] = [
+        tele("alt", "Altitude", "m", g, s["alt_true"], 1),
+        tele("sink", "Vertical speed (negative = descending)", "m/s", g, s["v_vert"], 2),
+        tele("vh", "Horizontal speed", "m/s", g, s["v_horiz"], 1),
+        tele("throttle", "Descent engine throttle", "%", g, s["throttle"], 1),
+        tele("pitch", "Pitch", "deg", g, s["pitch_deg"], 1),
+        tele("delta_h", "Landing radar minus computed altitude", "m", g[vm], s["delta_h"][vm], 2),
+    ]
+    thr = np.asarray(s["throttle"], float)
+    full = np.nonzero(thr >= 90.0)[0]
+    td = None
+    if len(full):
+        below = np.nonzero(thr[full[0]:] < 90.0)[0]
+        if len(below):
+            td = int(full[0] + below[0])
+    ph = np.asarray(s["phase"])
+    marks = dict(radar_lock_get=round(float(g[first_lock]), 1) if first_lock < len(t) else None,
+                 phases=[dict(id=f"P{p}", get=round(float(g[np.nonzero(ph == p)[0][0]]), 1)) for p in dict.fromkeys(int(x) for x in ph)])
+    if td is not None:
+        marks["throttle_down_get"] = round(float(g[td]), 1)
+    tr["marks"] = {k: v for k, v in marks.items() if v is not None}
     for i in range(len(t)):
         ph = int(s["phase"][i])
         ti = float(t[i])
@@ -457,6 +570,14 @@ def track_ascent(dsky):
               get=r1(LIFTOFF + t), x=r1(s["downrange_km"], 2), y=r1(s["alt_km"], 3), pitch_deg=r1(s["pitch_deg"], 1),
               perilune_km=round(float(s["perilune_km"]), 1), apolune_km=round(float(s["apolune_km"]), 1),
               note="P12 powered ascent from the simulation (lm_02).")
+    spd = np.hypot(s["r_dot"], s["z_dot"])
+    tr["fpa_deg"] = r1(fpa_deg(s["r_dot"], s["z_dot"]), 1)
+    ga = LIFTOFF + t
+    tr["telemetry"] = [
+        tele("alt", "Altitude", "km", ga, s["alt_km"], 3),
+        tele("speed", "Speed", "m/s", ga, spd, 1),
+        tele("pitch", "Pitch", "deg", ga, s["pitch_deg"], 1),
+    ]
     for i in range(0, len(t)):
         ab = math.hypot(s["r_dot"][i], s["z_dot"][i]) * FT
         dsky.append(dict(get=round(LIFTOFF + float(t[i]), 1), computer="LM", prog="12", verb="16", noun="63",
@@ -542,6 +663,15 @@ def track_rendezvous(dsky):
               lm_size_m=dict(w=4.3, h=3.8), csm_size_m=dict(length=11.0, d=3.9),
               note="Relative motion from the rendezvous simulation (lm_03), retimed to the real burns; braking, "
                    "station-keeping and docking follow the crew's range calls in the Flight Journal (approx.).")
+    Ga, Xa, Za = np.array(G), np.array(X), np.array(Z)
+    rng_km = np.hypot(Xa, Za)
+    ok = np.ones(len(Ga), bool)
+    ok[1:] = np.diff(Ga) > 1e-6
+    rate = np.gradient(rng_km[ok] * 1000.0, Ga[ok])  # m/s by differencing (not a radar measurement)
+    tr["telemetry"] = [
+        tele("range", "Range to Columbia", "km", Ga, rng_km, 2),
+        tele("range_rate", "Range rate (by differencing)", "m/s", Ga[ok], rate, 2),
+    ]
     for bid, prog, dv in [("csi", "32", (b["dv_csi"], 0.0)), ("cdh", "33", (b["dv_cdh"], 0.0)), ("tpi", "34", tuple(s["dv_tpi"]))]:
         dsky.append(dict(get=EV[bid] - 600, computer="LM", prog=prog, verb="06", noun="81",
                          r=[reg(dv[0] * FT * 10, 0), reg(0, 0), reg(-dv[1] * FT * 10, 0)], lights=[], flash=True, simulated=True,
@@ -572,13 +702,26 @@ def track_entry(dsky):
     X += list(np.linspace(h["downrange_km"][-1], h["downrange_km"][-1] + 3, 12)[1:])
     Y += list(np.linspace(h["alt_km"][-1], 0, 12)[1:])
     gl += [1.0] * 11
+    fpa = list(h["gamma_deg"][idx]) + [-90.0] * 11  # chute tail: vertical, approx.
+    roll = list(h["roll_deg"][idx]) + [float(h["roll_deg"][idx][-1])] * 11  # held, not simulated
     prog_at = []
     for name, ts, _x, _h in transitions:
         prog_at.append(dict(get=round(EI + ts, 1), program=name.split()[0]))
     tr = dict(frame="Altitude vs range flown from entry interface", x_label="Range flown (km)", y_label="Altitude (km)",
               get=r1(G), x=r1(X), y=r1(Y, 2), g=r1(gl, 2), transitions=prog_at, target_km=2320.0,
               steeroff=dict(get=round(EI + steeroff[0], 1)), sim_end=round(EI + float(t[-1]), 1),
+               fpa_deg=r1(fpa, 1), roll_deg=r1(roll, 1),
               note="Entry from the P63-P67 simulation (csm_05). Below ~24,000 ft (drogue chutes) the line to splashdown is not simulated.")
+    te = np.arange(0, len(t), 4)
+    ge = EI + t[te]
+    tr["telemetry"] = [
+        tele("g", "Deceleration load", "g", ge, h["g_load"][te], 2),
+        tele("bank", "Bank angle", "deg", ge, h["roll_deg"][te], 1),
+        tele("speed", "Speed", "m/s", ge, h["v_ms"][te], 0),
+        tele("alt", "Altitude", "km", ge, h["alt_km"][te], 2),
+        tele("range_to_go", "Range to go", "km", ge, h["range_to_go_km"][te], 1),
+    ]
+    tr["tail_note"] = "After sim_end the line to splashdown is not simulated: fpa_deg is set to -90 (approx.), roll_deg held."
     names = [p for p in h["phase"]]
     for i in range(0, len(t), 4):
         ph = names[i]
@@ -812,6 +955,13 @@ def code_steps(burn_dur):
 
 
 # ---------------------------------------------------------------------------
+def build_callouts():
+    """Derive canvas subtitle callouts directly from the verbatim transcript."""
+    tr = load_transcript()
+    lines = sorted(tr["lines"], key=lambda x: x["get"])
+    return [dict(get=float(x["get"]), speaker=x["who"], text=x["text"], approx=False) for x in lines]
+
+
 def build_data():
     dsky = []
     phases, timemap = build_phases()
@@ -839,12 +989,44 @@ def build_data():
                          "LM computer power-up at 096:00 GET is approximate."]),
         events=[dict(id=i, get=g, label=lab, short=sh, computer=c, detail=d) for i, g, lab, sh, c, d in EVENTS],
         phases=phases, timemap=timemap, tracks=tracks, dsky=dsky, lm_power=[[LM_ON, LM_OFF]],
-        code=code_steps(burn_dur),
+        code=code_steps(burn_dur), callouts=build_callouts(),
         transcript=load_transcript(),
     )
     return data
 
 
+def validate_new(d):
+    ok = lambda g: 0 <= g <= END  # noqa: E731
+    T = d["tracks"]
+
+    def check_tele(name, series):
+        for sr in series:
+            assert len(sr["get"]) == len(sr["v"]) > 1, (name, sr["key"])
+            assert all(b > a for a, b in zip(sr["get"], sr["get"][1:])), (name, sr["key"], "telemetry get not monotonic")
+            assert ok(sr["get"][0]) and ok(sr["get"][-1]), (name, sr["key"])
+            assert all(math.isfinite(x) for x in sr["v"]), (name, sr["key"])
+
+    for name in ("launch", "lunar-orbit", "descent", "ascent", "rendezvous", "entry"):
+        assert T[name]["telemetry"], name
+        check_tele(name, T[name]["telemetry"])
+    for name in ("launch", "descent", "ascent", "entry"):
+        assert len(T[name]["fpa_deg"]) == len(T[name]["get"]), (name, "fpa_deg")
+    assert len(T["entry"]["roll_deg"]) == len(T["entry"]["get"])
+    st = T["launch"]["stages"]
+    assert all(ok(x["get"]) for x in st) and [x["get"] for x in st] == sorted(x["get"] for x in st)
+    mk = T["descent"]["marks"]
+    assert ok(mk["radar_lock_get"]) and ok(mk["throttle_down_get"]), mk
+    assert all(ok(p["get"]) for p in mk["phases"])
+    cis = T["cislunar"]
+    for leg in cis["legs"]:
+        assert len(leg["v"]) == len(leg["get"]), leg["id"]
+    assert ok(cis["soi_get"]) and cis["legs"][0]["get"][0] < cis["soi_get"] < cis["legs"][0]["get"][-1]
+    lo = T["lunar-orbit"]
+    assert abs(math.hypot(*lo["earth_dir"]) - 1) < 1e-3
+    for w in lo["los"]:
+        assert ok(w["get0"]) and w["get0"] <= w["get1"] <= END and w["approx"] is True
+    co = d["callouts"]
+    assert [c["get"] for c in co] == sorted(c["get"] for c in co) and all(ok(c["get"]) for c in co)
 def load_transcript():
     """Verbatim crew and Mission Control lines with their GET (see transcript.json)."""
     t = json.loads((LIVE / "transcript.json").read_text(encoding="utf-8"))
@@ -892,6 +1074,7 @@ def validate(d):
                 if key in tr:
                     assert len(tr[key]) == n, (name, key)
             assert all(b >= a for a, b in zip(tr["get"], tr["get"][1:])), f"{name} get not monotonic"
+    validate_new(d)
     for c in d["code"]:
         f = (REPO / c["agc"]["file"]).read_text(encoding="utf-8", errors="replace").splitlines()
         assert f[c["agc"]["line"] - 1].split()[0] == c["agc"]["label"], c["id"]
@@ -900,6 +1083,21 @@ def validate(d):
         assert a["get_end"] == b["get_start"] and a["get_start"] < a["get_end"], (a["id"], b["id"])
 
 
+def assemble_template() -> str:
+    src = LIVE / "src"
+    css_files = sorted((src / "css").glob("*.css"), key=lambda p: p.name)
+    js_files = sorted(
+        list((src / "js").glob("*.js")) + list((src / "js" / "scenes").glob("*.js")),
+        key=lambda p: p.name,
+    )
+    css = "".join(p.read_text(encoding="utf-8") for p in css_files)
+    js = "".join(p.read_text(encoding="utf-8") for p in js_files)
+    return (
+        (src / "page.html")
+        .read_text(encoding="utf-8")
+        .replace("/*__CSS__*/\n", css)
+        .replace("/*__JS__*/\n", js)
+    )
 FONTS_DIR = LIVE / "fonts"
 
 EXPECTED_FONTS = [
@@ -970,8 +1168,7 @@ def main(argv=None):
     data = build_data()
     validate(data)
     blob = json.dumps(data, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
-    tpl = (LIVE / "template.html").read_text(encoding="utf-8")
-    frag = bundle_fonts(tpl).replace("__MISSION_DATA__", blob)
+    frag = bundle_fonts(assemble_template()).replace("__MISSION_DATA__", blob)
     json_ld = {
         "@context": "https://schema.org",
         "@type": "WebApplication",

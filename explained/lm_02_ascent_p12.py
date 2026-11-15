@@ -11,7 +11,7 @@ readable Python:
 import numpy as np
 import matplotlib.pyplot as plt
 
-from common import MU_MOON, R_MOON, save, src, step
+from common import MU_MOON, PALETTE, R_MOON, glow_line, save, src, step
 
 
 # ---------------------------------------------------------------------------
@@ -310,15 +310,20 @@ def plot_altitude_velocity(sim: dict) -> None:
     t = sim["t"]
 
     # Panel 1: Altitude & Radial Velocity
-    ax1.plot(t, sim["alt_km"], color="#1f77b4", lw=2.4, label="Altitude h = |R| - /LAND/ (km)")
-    ax1.axhline(H_INJECT / 1000.0, color="#1f77b4", ls="--", lw=1.1, label="HINJECT Target (18.29 km / 60,000 ft)")
-    ax1.set_ylabel("Altitude (km)", color="#1f77b4")
+    glow_line(ax1, t, sim["alt_km"], color=PALETTE["lm"], lw=2.4, label="Altitude h = |R| - /LAND/ (km)")
+    ax1.axhline(H_INJECT / 1000.0, color=PALETTE["lm"], ls="--", lw=1.1, label="HINJECT Target (18.29 km / 60,000 ft)")
+    ax1.set_ylabel("Altitude (km)", color=PALETTE["lm"])
+    ax1.tick_params(axis="y", labelcolor=PALETTE["lm"])
 
     ax1_r = ax1.twinx()
     ax1_r.spines["top"].set_visible(False)
-    ax1_r.plot(t, sim["r_dot"], color="#2ca02c", lw=2.0, label="Radial Rate RDOT (m/s)")
-    ax1_r.axhline(RDOT_D_NOM, color="#2ca02c", ls=":", lw=1.1, label="RDOTDNOM Target (5.94 m/s / 19.5 ft/s)")
-    ax1_r.set_ylabel("Radial Rate RDOT (m/s)", color="#2ca02c")
+    ax1_r.spines["right"].set_visible(True)
+    ax1_r.spines["right"].set_color(PALETTE["spine"])
+    ax1_r.grid(False)
+    glow_line(ax1_r, t, sim["r_dot"], color=PALETTE["dsky"], lw=2.0, label="Radial Rate RDOT (m/s)")
+    ax1_r.axhline(RDOT_D_NOM, color=PALETTE["dsky"], ls=":", lw=1.1, label="RDOTDNOM Target (5.94 m/s / 19.5 ft/s)")
+    ax1_r.set_ylabel("Radial Rate RDOT (m/s)", color=PALETTE["dsky"])
+    ax1_r.tick_params(axis="y", labelcolor=PALETTE["dsky"])
 
     ax1.set_title(
         f"Apollo 11 Powered Ascent (P12): Climb to {sim['alt_km'][-1]:.1f} km Cutoff "
@@ -334,13 +339,16 @@ def plot_altitude_velocity(sim: dict) -> None:
         xy=(t[idx_peak_rdot], sim["r_dot"][idx_peak_rdot]),
         xytext=(t[idx_peak_rdot] + 25.0, sim["r_dot"][idx_peak_rdot] - 6.0),
         fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#2ca02c"},
+        color=PALETTE["dsky"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": PALETTE["dsky"], "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": PALETTE["dsky"]},
     )
 
     # Panel 2: Horizontal Velocity & Velocity-to-be-gained VG
-    ax2.plot(t, sim["z_dot"], color="#d62728", lw=2.3, label="Horizontal Speed ZDOT (m/s)")
-    ax2.plot(t, sim["vg"], color="#9467bd", lw=1.9, ls="--", label="Velocity-to-be-Gained |VGVECT| (m/s)")
-    ax2.axhline(VINJ_83KM, color="#555555", ls=":", lw=1.0, label=f"Target ZDOTD ({VINJ_83KM:.1f} m/s)")
+    glow_line(ax2, t, sim["z_dot"], color=PALETTE["lm"], lw=2.3, label="Horizontal Speed ZDOT (m/s)")
+    glow_line(ax2, t, sim["vg"], color=PALETTE["csm"], lw=1.9, ls="--", label="Velocity-to-be-Gained |VGVECT| (m/s)")
+    ax2.axhline(VINJ_83KM, color=PALETTE["muted"], ls=":", lw=1.0, label=f"Target ZDOTD ({VINJ_83KM:.1f} m/s)")
 
     ax2.annotate(
         f"Engine Cutoff (ENGOFF)\nt = {t[-1]:.1f} s, ZDOT = {sim['z_dot'][-1]:.1f} m/s\n"
@@ -348,8 +356,10 @@ def plot_altitude_velocity(sim: dict) -> None:
         xy=(t[-1], sim["z_dot"][-1]),
         xytext=(t[-1] - 135.0, sim["z_dot"][-1] - 480.0),
         fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#333333"},
-        bbox={"boxstyle": "round,pad=0.25", "fc": "white", "ec": "#cccccc"},
+        color=PALETTE["dsky"],
+        fontweight="bold",
+        arrowprops={"arrowstyle": "->", "color": PALETTE["dsky"]},
+        bbox={"boxstyle": "round,pad=0.25", "fc": PALETTE["fig_bg"], "ec": PALETTE["dsky"], "alpha": 0.92},
     )
     ax2.set_ylabel("Speed (m/s)")
     ax2.set_xlabel("Time Since Liftoff, TIG (s)")
@@ -364,34 +374,40 @@ def plot_pitch_profile(sim: dict) -> None:
     t = sim["t"]
 
     # Panel 1: Pitch angle from vertical
-    ax1.plot(t, sim["pitch_deg"], color="#1f77b4", lw=2.4, label="Commanded Pitch from Vertical (deg)")
-    ax1.axhline(90.0, color="#666666", ls=":", lw=1.0, label="Local Horizontal (90 deg)")
+    glow_line(ax1, t, sim["pitch_deg"], color=PALETTE["lm"], lw=2.4, label="Commanded Pitch from Vertical (deg)")
+    ax1.axhline(90.0, color=PALETTE["muted"], ls=":", lw=1.0, label="Local Horizontal (90 deg)")
     ax1.annotate(
         "Vertical Rise (FLVR = 1)\nuntil RDOT >= 40 ft/s (12.2 m/s)",
         xy=(6.0, 0.0),
         xytext=(28.0, 12.0),
         fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#333333"},
+        color=PALETTE["text"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": PALETTE["spine"], "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": PALETTE["muted"]},
     )
     ax1.annotate(
         "Pitchover (EXITVR)\ninto linear-tangent steering",
         xy=(10.0, sim["pitch_deg"][5]),
         xytext=(48.0, 40.0),
         fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#1f77b4"},
+        color=PALETTE["lm"],
+        fontweight="bold",
+        bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": PALETTE["lm"], "alpha": 0.9},
+        arrowprops={"arrowstyle": "->", "color": PALETTE["lm"]},
     )
     t_freeze = t[-1] - T3_RATE_FREEZE
-    ax1.axvline(t_freeze, color="#ff7f0e", ls="--", lw=1.2, label="Rate Freeze at TGO = T3 (10 s)")
+    ax1.axvline(t_freeze, color=PALETTE["alarm"], ls="--", lw=1.2, label="Rate Freeze at TGO = T3 (10 s)")
     ax1.set_ylabel("Pitch Angle from Vertical (deg)")
     ax1.set_title("Apollo 11 Ascent Guidance (ASCENT_GUIDANCE.agc): Pitch & Acceleration Profile")
     ax1.legend(loc="lower right", fontsize=8.5)
 
     # Panel 2: Commanded thrust accelerations (AT, ATP downrange, ATR radial)
-    ax2.plot(t, sim["at_mag"], color="#333333", lw=2.0, label="Total Thrust Accel AT = VE / TBUP (m/s^2)")
-    ax2.plot(t, sim["atp"], color="#d62728", lw=2.1, label="Downrange Accel ATP (m/s^2)")
-    ax2.plot(t, sim["atr"], color="#2ca02c", lw=2.1, label="Radial Accel ATR = (A + B*dt)/TBUP - GEFF (m/s^2)")
-    ax2.axhline(0.0, color="#666666", lw=0.8)
-    ax2.axvline(t_freeze, color="#ff7f0e", ls="--", lw=1.2)
+    glow_line(ax2, t, sim["at_mag"], color=PALETTE["csm"], lw=2.0, label="Total Thrust Accel AT = VE / TBUP (m/s^2)")
+    glow_line(ax2, t, sim["atp"], color=PALETTE["lm"], lw=2.1, label="Downrange Accel ATP (m/s^2)")
+    glow_line(ax2, t, sim["atr"], color=PALETTE["dsky"], lw=2.1, label="Radial Accel ATR = (A + B*dt)/TBUP - GEFF (m/s^2)")
+    ax2.axhline(0.0, color=PALETTE["muted"], lw=0.8)
+    ax2.axvline(t_freeze, color=PALETTE["alarm"], ls="--", lw=1.2)
     ax2.set_ylabel("Acceleration (m/s^2)")
     ax2.set_xlabel("Time Since Liftoff, TIG (s)")
     ax2.legend(loc="upper left", fontsize=8.5)
