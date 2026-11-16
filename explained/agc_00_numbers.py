@@ -14,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 
-from common import save, src, step
+from common import PALETTE, glow_line, save, src, step
 
 MASK15 = 0o77777          # 15-bit word mask (32767)
 SIGN_BIT = 0o40000        # Bit 15 (1-indexed, MSB) is the sign bit
@@ -166,21 +166,21 @@ def plot_bit_layout() -> plt.Figure:
     col_x = [-0.30, 1.65] + [2.70 + i * 0.95 for i in range(14)]
     headers = ["P\nMem", "B15\nSign"] + [f"B{14 - i}\n2^-{i + 1}" for i in range(14)]
     for cx, hdr in zip(col_x, headers):
-        color = "#6b7280" if "Mem" in hdr else ("#b91c1c" if "Sign" in hdr else "#1e3a8a")
+        color = PALETTE["muted"] if "Mem" in hdr else (PALETTE["alarm"] if "Sign" in hdr else PALETTE["csm"])
         ax.text(cx + 0.4, len(examples) + 0.42, hdr, ha="center", va="center",
                 fontsize=8, fontweight="bold", color=color)
 
     # Vertical dashed line visually separating memory-only parity from the 15-bit software word
-    ax.plot([1.05, 1.05], [-0.3, len(examples) + 1.25], color="#9ca3af", ls="--", lw=1.2)
+    ax.plot([1.05, 1.05], [-0.3, len(examples) + 1.25], color=PALETTE["grid"], ls="--", lw=1.4)
 
     # Group labels at top
     ax.text(-0.05, len(examples) + 1.05, "parity (memory only,\nnot seen by software)",
-            ha="center", va="center", fontsize=7.8, color="#4b5563", fontweight="bold")
+            ha="center", va="center", fontsize=7.8, color=PALETTE["muted"], fontweight="bold")
     ax.text(2.05, len(examples) + 1.05, "Sign\n(0=+, 1=-)", ha="center", va="center",
-            fontsize=8.2, color="#b91c1c", fontweight="bold")
+            fontsize=8.2, color=PALETTE["alarm"], fontweight="bold")
     ax.text(9.35, len(examples) + 1.05,
             "14 Magnitude Bits — Bits 14..1 (ones'-complement: inverted when Sign = 1)",
-            ha="center", va="center", fontsize=9, color="#1e3a8a", fontweight="bold")
+            ha="center", va="center", fontsize=9, color=PALETTE["csm"], fontweight="bold")
 
     for row_idx, (name, word, desc, citation) in enumerate(examples):
         y = len(examples) - 1 - row_idx
@@ -191,20 +191,23 @@ def plot_bit_layout() -> plt.Figure:
 
         # Label on the left
         ax.text(-0.55, y + 0.42, name, ha="right", va="center",
-                fontsize=9.5, fontweight="bold", color="#111827")
+                fontsize=9.5, fontweight="bold", color=PALETTE["text"])
         ax.text(-0.55, y + 0.12, citation, ha="right", va="center",
-                fontsize=7.2, color="#4b5563", family="monospace")
+                fontsize=7.2, color=PALETTE["muted"], family="monospace")
 
         for col_i, (cx, b) in enumerate(zip(col_x, all_bits)):
             if col_i == 0:  # Parity bit (memory only, far left)
-                face = "#f3f4f6"
-                edge = "#9ca3af"
+                face = "#141c28"
+                edge = PALETTE["grid"]
+                txt_col = PALETTE["muted"]
             elif col_i == 1:  # Bit 15: Sign bit
-                face = "#fecaca" if b == 1 else "#dcfce7"
-                edge = "#dc2626" if b == 1 else "#16a34a"
+                face = "#3b181b" if b == 1 else "#173223"
+                edge = PALETTE["alarm"] if b == 1 else PALETTE["dsky"]
+                txt_col = PALETTE["alarm"] if b == 1 else PALETTE["dsky"]
             else:  # Bits 14..1: 14 Magnitude bits
-                face = "#dbeafe" if b == 1 else "#ffffff"
-                edge = "#2563eb" if b == 1 else "#cbd5e1"
+                face = "#172d44" if b == 1 else PALETTE["ax_bg"]
+                edge = PALETTE["csm"] if b == 1 else PALETTE["grid"]
+                txt_col = PALETTE["csm"] if b == 1 else PALETTE["muted"]
 
             box = FancyBboxPatch(
                 (cx, y + 0.08), 0.80, 0.52,
@@ -214,15 +217,15 @@ def plot_bit_layout() -> plt.Figure:
             ax.add_patch(box)
             ax.text(cx + 0.40, y + 0.34, str(b), ha="center", va="center",
                     fontsize=9.5, fontweight="bold", family="monospace",
-                    color="#6b7280" if col_i == 0 else "#111827")
+                    color=txt_col)
 
         # Description below the 15-bit software word boxes
         ax.text(1.60, y - 0.14, desc, ha="left", va="center",
-                fontsize=8.2, color="#374151", family="monospace")
+                fontsize=8.2, color=PALETTE["muted"], family="monospace")
 
     ax.set_title(
         "AGC 15-Bit Software Word (Bit 15 Sign + Bits 14..1 Magnitude) & Memory-Only Parity Bit",
-        fontsize=12.2, fontweight="bold", pad=12
+        fontsize=12.2, fontweight="bold", pad=12, color=PALETTE["text"]
     )
     save(fig, "agc_00_bit_layout")
     return fig
@@ -241,7 +244,7 @@ def plot_scaling_precision() -> plt.Figure:
         ("Earth Position RP-TO-R\n(DP 2^29 m = 536,871 km)", 2.0**29, True, "m", "PLANETARY_INERTIAL_ORIENTATION.agc @ RP-TO-R"),
     ]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5.2))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12.5, 5.4))
 
     names = [v[0] for v in variables]
     full_scales = [v[1] for v in variables]
@@ -255,16 +258,17 @@ def plot_scaling_precision() -> plt.Figure:
     height = 0.36
 
     ax1.barh(y_pos + height / 2, sp_res, height, label="Single Precision (14 mag bits: 2^-14)",
-             color="#f59e0b", alpha=0.88)
+             color=PALETTE["lm"], alpha=0.88, edgecolor="none")
     ax1.barh(y_pos - height / 2, dp_res, height, label="Double Precision (28 mag bits: 2^-28)",
-             color="#2563eb", alpha=0.88)
+             color=PALETTE["csm"], alpha=0.88, edgecolor="none")
     ax1.set_xscale("log")
+    ax1.set_xlim(1e-8, 3e5)
     ax1.set_yticks(y_pos)
     ax1.set_yticklabels(names, fontsize=8.5)
     ax1.invert_yaxis()
     ax1.set_xlabel("Smallest Representable Step (1 LSB, log scale)")
     ax1.set_title("Why Navigation Needed Double Precision (28 bits)")
-    ax1.legend(loc="lower right", fontsize=8.5)
+    ax1.legend(loc="upper right", fontsize=8.2)
 
     for i, (sr, dr, u, dp_flag) in enumerate(zip(sp_res, dp_res, units, is_dp)):
         active_val = dr if dp_flag else sr
@@ -272,25 +276,25 @@ def plot_scaling_precision() -> plt.Figure:
         ax1.annotate(tag, xy=(active_val, i - (height / 2 if dp_flag else -height / 2)),
                      xytext=(6, 0), textcoords="offset points", va="center",
                      fontsize=8, fontweight="bold",
-                     color="#1d4ed8" if dp_flag else "#b45309")
+                     color=PALETTE["csm"] if dp_flag else PALETTE["lm"])
 
     # Right panel: quantization error curve across (-1, 1) for a B-24 altitude variable
     alt_true = np.linspace(0.0, 15000.0, 300)  # 0 to 15 km altitude in meters
     alt_sp = np.array([decode_sp_fraction(encode_sp_fraction(h, 24), 24) for h in alt_true])
     alt_dp = np.array([decode_dp_fraction(*encode_dp_fraction(h, 24), 24) for h in alt_true])
 
-    ax2.plot(alt_true / 1000.0, alt_sp - alt_true, color="#f59e0b", lw=1.4,
-             label=f"SP B-24 error (±{2**24 / 2**15:.0f} m step = {2**10:.0f} m!)")
-    ax2.plot(alt_true / 1000.0, (alt_dp - alt_true) * 1000.0, color="#2563eb", lw=1.2,
-             label="DP B-24 error × 1000 (±0.031 m = 3.1 cm!)")
-    ax2.axhline(0, color="#6b7280", ls="--", lw=0.8)
+    glow_line(ax2, alt_true / 1000.0, alt_sp - alt_true, color=PALETTE["lm"], lw=1.6,
+              label=f"SP B-24 error (±{2**24 / 2**15:.0f} m step = {2**10:.0f} m!)")
+    glow_line(ax2, alt_true / 1000.0, (alt_dp - alt_true) * 1000.0, color=PALETTE["csm"], lw=1.4,
+              label="DP B-24 error × 1000 (±0.031 m = 3.1 cm!)")
+    ax2.axhline(0, color=PALETTE["muted"], ls="--", lw=0.9)
     ax2.set_xlabel("True Lunar Altitude (km)")
     ax2.set_ylabel("Quantization Error: SP (m) / DP (mm)")
     ax2.set_title("Quantization Error at B-24 m (1024 m vs 6.25 cm)")
-    ax2.legend(loc="upper right", fontsize=8.5)
+    ax2.legend(loc="upper right", fontsize=8.2)
 
     fig.suptitle("Fixed-Point Scaling (`B-n`) Range vs. Precision in Luminary099",
-                 fontsize=12, fontweight="bold")
+                 fontsize=12.5, fontweight="bold", color=PALETTE["text"])
     save(fig, "agc_00_scaling_precision")
     return fig
 

@@ -28,8 +28,10 @@ from matplotlib.patches import Circle
 
 from common import (
     MU_MOON,
+    PALETTE,
     R_MOON,
     G0,
+    glow_line,
     src,
     step,
     save,
@@ -400,51 +402,55 @@ def plot_p40_burn_telemetry(history):
         "Comanche055 P40-P47.agc & SERVICER207.agc — LOI-1 Burn Telemetry (Noun 40)",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Panel 1: VGO (Noun 40 R2) and DVTOTAL (Noun 40 R3)
-    ax1.plot(t, vgo, color="#2563eb", lw=2.2, label="VG: Velocity-to-be-Gained |VGO| (Noun 40 R2)")
-    ax1.plot(t, dv_tot, color="#059669", lw=2.2, label="DVTOTAL: Sensed Delta-V (Noun 40 R3)")
-    ax1.axvline(t[-1] - 4.0, color="#dc2626", ls="--", lw=1.2, label="S40.6 Steering Freeze (TGO = 4 s)")
+    glow_line(ax1, t, vgo, color=PALETTE["csm"], lw=2.2, label="VG: Velocity-to-be-Gained |VGO| (Noun 40 R2)")
+    glow_line(ax1, t, dv_tot, color=PALETTE["dsky"], lw=2.2, label="DVTOTAL: Sensed Delta-V (Noun 40 R3)")
+    ax1.axvline(t[-1] - 4.0, color=PALETTE["alarm"], ls="--", lw=1.2, label="S40.6 Steering Freeze (TGO = 4 s)")
     ax1.set_ylabel("Velocity (m/s)")
     ax1.set_title("UPDATEVG & DVTOTUP — Velocity-to-be-Gained vs Sensed Delta-V")
     ax1.legend(loc="center right", fontsize=8.5)
 
     # Panel 2: Thrust pitch attitude (S40.8 Cross-Product Steering)
-    ax2.plot(
+    glow_line(
+        ax2,
         t,
         pitch,
-        color="#d97706",
+        color=PALETTE["lm"],
         lw=2.2,
         label="Commanded Thrust Pitch Angle UT (S40.8 / XPRODUCT)",
     )
-    ax2.axvline(t[-1] - 4.0, color="#dc2626", ls="--", lw=1.2)
+    ax2.axvline(t[-1] - 4.0, color=PALETTE["alarm"], ls="--", lw=1.2)
     ax2.annotate(
         f"S40.1 Lead-Angle Attitude\nat Ignition ({pitch[0]:.1f} deg)",
         xy=(t[0], pitch[0]),
         xytext=(48, pitch[0] + 4.5),
-        arrowprops=dict(arrowstyle="->", color="#b45309", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["lm"], lw=1.2),
         fontsize=8.5,
         fontweight="bold",
-        color="#b45309",
+        color=PALETTE["lm"],
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["lm"], alpha=0.9),
     )
     ax2.annotate(
         f"S40.6 Cutoff Attitude\n({pitch[-1]:.1f} deg)",
         xy=(t[-1], pitch[-1]),
         xytext=(t[-1] - 105, pitch[-1] - 9.0),
-        arrowprops=dict(arrowstyle="->", color="#dc2626", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["alarm"], lw=1.2),
         fontsize=8.5,
         fontweight="bold",
-        color="#dc2626",
+        color=PALETTE["alarm"],
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["alarm"], alpha=0.9),
     )
     ax2.set_ylabel("Inertial Pitch (deg)")
     ax2.set_title("S40.8 Cross-Product Steering — Thrust Vector Pitch Rate Across Burn")
-    ax2.legend(loc="lower left", fontsize=8.5)
+    ax2.legend(loc="upper left", fontsize=8.5)
 
     # Panel 3: Time-to-Go TGO (Noun 40 R1) and SPS acceleration
-    color_tgo = "#7c3aed"
-    color_acc = "#dc2626"
-    ax3.plot(t, tgo, color=color_tgo, lw=2.0, label="TGO: Time-to-Go to Cutoff (Noun 40 R1)")
+    color_tgo = PALETTE["csm"]
+    color_acc = PALETTE["alarm"]
+    glow_line(ax3, t, tgo, color=color_tgo, lw=2.0, label="TGO: Time-to-Go to Cutoff (Noun 40 R1)")
     ax3.set_xlabel("Burn Elapsed Time Since Ignition (s)")
     ax3.set_ylabel("TGO (s)", color=color_tgo)
     ax3.tick_params(axis="y", labelcolor=color_tgo)
@@ -461,12 +467,14 @@ def plot_p40_burn_telemetry(history):
     )
     ax3_r.set_ylabel("Thrust Accel (Earth g)", color=color_acc)
     ax3_r.tick_params(axis="y", labelcolor=color_acc)
+    ax3_r.spines["right"].set_visible(True)
+    ax3_r.spines["right"].set_color(PALETTE["spine"])
     ax3_r.set_ylim(0.18, 0.30)
     ax3_r.grid(False)
 
     l1, lb1 = ax3.get_legend_handles_labels()
     l2, lb2 = ax3_r.get_legend_handles_labels()
-    ax3.legend(l1 + l2, lb1 + lb2, loc="upper right", fontsize=8.5)
+    ax3.legend(l1 + l2, lb1 + lb2, loc="center right", fontsize=8.5)
 
     fig.tight_layout()
     save(fig, "csm_04_p40_burn_telemetry")
@@ -503,6 +511,7 @@ def plot_loi1_orbit_capture(r_tig, v_tig, history, post_orb):
         "Comanche055 P30/P40 — Apollo 11 Lunar Orbit Insertion (LOI-1) Capture Geometry",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Pre-burn approach hyperbola (inbound and unburned flyby continuation)
@@ -522,15 +531,16 @@ def plot_loi1_orbit_capture(r_tig, v_tig, history, post_orb):
     burn_r_km = history["r"] / 1e3
 
     # Plot Moon body
-    moon_disk = Circle((0.0, 0.0), R_MOON / 1e3, color="#cbd5e1", ec="#475569", lw=1.5, zorder=2)
+    moon_disk = Circle((0.0, 0.0), R_MOON / 1e3, facecolor="#242c3a", edgecolor=PALETTE["moon"], lw=1.6, zorder=2)
     ax.add_patch(moon_disk)
-    ax.text(0.0, 0.0, "MOON\n(R = 1,737.4 km)", ha="center", va="center", fontweight="bold", color="#334155")
+    ax.text(0.0, 0.0, "MOON\n(R = 1,737.4 km)", ha="center", va="center", fontweight="bold", color=PALETTE["moon"])
 
     # Plot trajectories
-    ax.plot(
+    glow_line(
+        ax,
         arc_in[:, 0],
         arc_in[:, 1],
-        color="#2563eb",
+        color=PALETTE["csm"],
         lw=2.0,
         label="Inbound Lunar Approach Hyperbola",
     )
@@ -538,14 +548,15 @@ def plot_loi1_orbit_capture(r_tig, v_tig, history, post_orb):
         arc_flyby[:, 0],
         arc_flyby[:, 1],
         "--",
-        color="#94a3b8",
+        color=PALETTE["muted"],
         lw=1.5,
         label="Unburned Free-Return Flyby Continuation",
     )
-    ax.plot(
+    glow_line(
+        ax,
         arc_cap[:, 0],
         arc_cap[:, 1],
-        color="#059669",
+        color=PALETTE["dsky"],
         lw=2.2,
         label=(
             f"Captured LOI-1 Orbit: {post_orb['h_apo_m']/1e3:.1f} x {post_orb['h_peri_m']/1e3:.1f} km "
@@ -553,36 +564,39 @@ def plot_loi1_orbit_capture(r_tig, v_tig, history, post_orb):
             f"[approx. Apollo 11: 314.7 x 112.8 km / 169.9 x 60.9 NM]"
         ),
     )
-    ax.plot(
+    glow_line(
+        ax,
         burn_r_km[:, 0],
         burn_r_km[:, 1],
-        color="#dc2626",
+        color=PALETTE["alarm"],
         lw=4.0,
         zorder=5,
         label=f"P40 SPS Powered Arc ({history['t'][-1]:.1f} s, DV = {history['dv_total'][-1]:.1f} m/s)",
     )
 
     # Mark TIG and Cutoff
-    ax.plot(burn_r_km[0, 0], burn_r_km[0, 1], "o", color="#dc2626", ms=8, zorder=6)
-    ax.plot(burn_r_km[-1, 0], burn_r_km[-1, 1], "s", color="#0f766e", ms=8, zorder=6)
+    ax.plot(burn_r_km[0, 0], burn_r_km[0, 1], "o", color=PALETTE["alarm"], ms=8, zorder=6)
+    ax.plot(burn_r_km[-1, 0], burn_r_km[-1, 1], "s", color=PALETTE["dsky"], ms=8, zorder=6)
 
     ax.annotate(
         "LOI-1 Ignition (TIG)\nBehind Lunar Far Side",
         xy=(burn_r_km[0, 0], burn_r_km[0, 1]),
         xytext=(burn_r_km[0, 0] + 380, burn_r_km[0, 1] - 420),
-        arrowprops=dict(arrowstyle="->", color="#dc2626", lw=1.3),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["alarm"], lw=1.3),
         fontsize=8.8,
         fontweight="bold",
-        color="#b91c1c",
+        color=PALETTE["alarm"],
+        bbox=dict(boxstyle="round,pad=0.25", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["alarm"], alpha=0.9),
     )
     ax.annotate(
         "SPS Cutoff (ENGINOFF)\nPerilune ~111 km",
         xy=(burn_r_km[-1, 0], burn_r_km[-1, 1]),
         xytext=(burn_r_km[-1, 0] - 1150, burn_r_km[-1, 1] - 480),
-        arrowprops=dict(arrowstyle="->", color="#0f766e", lw=1.3),
+        arrowprops=dict(arrowstyle="->", color=PALETTE["dsky"], lw=1.3),
         fontsize=8.8,
         fontweight="bold",
-        color="#0f766e",
+        color=PALETTE["dsky"],
+        bbox=dict(boxstyle="round,pad=0.25", facecolor=PALETTE["fig_bg"], edgecolor=PALETTE["dsky"], alpha=0.9),
     )
 
     # Draw sample thrust direction arrows along the powered burn arc
@@ -598,8 +612,8 @@ def plot_loi1_orbit_capture(r_tig, v_tig, history, post_orb):
             dy,
             head_width=65,
             head_length=80,
-            fc="#d97706",
-            ec="#d97706",
+            fc=PALETTE["lm"],
+            ec=PALETTE["lm"],
             zorder=6,
         )
 

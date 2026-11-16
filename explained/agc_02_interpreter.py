@@ -22,7 +22,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
 
-from common import save, src, step
+from common import PALETTE, save, src, step
 
 # Authentic AGC quotes from Luminary099/LUNAR_LANDING_GUIDANCE_EQUATIONS.agc (lines 442-480)
 RGVGCALC_AGC_SOURCE = """\
@@ -362,63 +362,65 @@ def plot_interpreter_trace(interp: TinyAGCInterpreter) -> plt.Figure:
 
     # Render clean alternating-row table of all 22 interpretive steps
     n_rows = len(rows)
-    ax_tbl.set_xlim(0, 100)
+    ax_tbl.set_xlim(0, 102)
     ax_tbl.set_ylim(-1.35, n_rows + 1.2)
 
     cols = [
-        (1.0, "#", "left"),
-        (4.5, "Opcode", "left"),
-        (12.5, "Operand", "left"),
-        (25.0, "Mode", "left"),
-        (33.0, "MPAC Accumulator (SI units)", "left"),
-        (59.5, "PD Ptr", "center"),
-        (64.0, "Push-Down List State / Effect", "left"),
+        (0.8, "#", "left"),
+        (3.8, "Opcode", "left"),
+        (11.0, "Operand", "left"),
+        (24.0, "Mode", "left"),
+        (31.5, "MPAC Accumulator (SI units)", "left"),
+        (56.5, "PD Ptr", "center"),
+        (60.5, "Push-Down List State / Effect", "left"),
     ]
     for cx, title, align in cols:
         ax_tbl.text(cx, n_rows + 0.45, title, fontsize=8.8, fontweight="bold",
-                    ha=align, va="center", color="#1e3a8a")
-    ax_tbl.plot([0.5, 99.5], [n_rows + 0.05, n_rows + 0.05], color="#1e3a8a", lw=1.2)
+                    ha=align, va="center", color=PALETTE["csm"])
+    ax_tbl.plot([0.5, 101.5], [n_rows + 0.05, n_rows + 0.05], color=PALETTE["csm"], lw=1.2)
 
     for idx, r in enumerate(rows):
         y = n_rows - 1 - idx
         # Highlight stack push/pop and RTB operations
         is_stack_op = r.opcode in ("PDDL", "VDEF", "PUSH", "RTB") or "(PUSHUP)" in r.operand
-        bg_color = "#fef3c7" if is_stack_op else ("#f8fafc" if idx % 2 == 0 else "#ffffff")
+        bg_color = "#29231a" if is_stack_op else ("#161f2e" if idx % 2 == 0 else PALETTE["ax_bg"])
+        edge_col = PALETTE["lm"] if is_stack_op else "none"
         rect = FancyBboxPatch(
-            (0.5, y - 0.38), 99.0, 0.82,
-            boxstyle="square,pad=0", facecolor=bg_color, edgecolor="none"
+            (0.5, y - 0.38), 101.0, 0.82,
+            boxstyle="square,pad=0", facecolor=bg_color, edgecolor=edge_col, linewidth=0.6 if is_stack_op else 0
         )
         ax_tbl.add_patch(rect)
 
-        ax_tbl.text(1.0, y, f"{r.step_idx:2d}", fontsize=8, family="monospace", va="center")
-        ax_tbl.text(4.5, y, r.opcode, fontsize=8.2, fontweight="bold", family="monospace",
-                    color="#b91c1c" if is_stack_op else "#111827", va="center")
-        ax_tbl.text(12.5, y, r.operand, fontsize=7.8, family="monospace", color="#374151", va="center")
-        ax_tbl.text(25.0, y, r.mode, fontsize=7.8, family="monospace",
-                    color="#0284c7" if "VEC" in r.mode else "#059669", va="center")
-        ax_tbl.text(33.0, y, r.mpac_str, fontsize=8, family="monospace", color="#111827", va="center")
-        ax_tbl.text(59.5, y, f"{r.pushloc:2d}D", fontsize=8, fontweight="bold",
+        ax_tbl.text(0.8, y, f"{r.step_idx:2d}", fontsize=8, family="monospace",
+                    color=PALETTE["muted"], va="center")
+        ax_tbl.text(3.8, y, r.opcode, fontsize=8.2, fontweight="bold", family="monospace",
+                    color=PALETTE["lm"] if is_stack_op else PALETTE["text"], va="center")
+        ax_tbl.text(11.0, y, r.operand, fontsize=7.8, family="monospace", color=PALETTE["text"], va="center")
+        ax_tbl.text(24.0, y, r.mode, fontsize=7.8, family="monospace",
+                    color=PALETTE["csm"] if "VEC" in r.mode else PALETTE["dsky"], va="center")
+        ax_tbl.text(31.5, y, r.mpac_str, fontsize=8, family="monospace", color=PALETTE["text"], va="center")
+        ax_tbl.text(56.5, y, f"{r.pushloc:2d}D", fontsize=8, fontweight="bold",
                     family="monospace", ha="center", va="center",
-                    color="#d97706" if r.pushloc > 0 else "#6b7280")
-        ax_tbl.text(64.0, y, r.comment, fontsize=7.6, color="#374151", va="center")
+                    color=PALETTE["lm"] if r.pushloc > 0 else PALETTE["muted"])
+        ax_tbl.text(60.5, y, r.comment, fontsize=7.4, color=PALETTE["muted"], va="center")
 
     # Show the post-EXIT Basic (non-interpretive) instructions clearly at bottom of table
     basic_box = FancyBboxPatch(
-        (0.5, -1.20), 99.0, 0.78,
-        boxstyle="square,pad=0", facecolor="#e0f2fe", edgecolor="#0284c7", linewidth=0.8
+        (0.5, -1.20), 101.0, 0.78,
+        boxstyle="square,pad=0", facecolor="#13263b", edgecolor=PALETTE["csm"], linewidth=0.9
     )
     ax_tbl.add_patch(basic_box)
     ax_tbl.text(
         1.2, -0.81,
         "Post-EXIT Basic (non-interpretive):  CA FIXLOC / TS PUSHLOC (resets PUSHLOC 2D -> 0D)  |  "
         "CA MPAC / DOUBLE (SINE(LOOKANGL)/4 -> SINE(LOOKANGL)/2) -> SPARCSIN -1",
-        fontsize=7.5, fontweight="bold", family="monospace", color="#0369a1", va="center"
+        fontsize=7.5, fontweight="bold", family="monospace", color=PALETTE["csm"], va="center"
     )
 
     ax_tbl.set_title(
         "Step-by-Step Execution of `RGVGCALC` (`Luminary099/LUNAR_LANDING_GUIDANCE_EQUATIONS.agc`) "
         "in the AGC Interpreter",
-        fontsize=11.5, fontweight="bold", pad=8
+        fontsize=11.5, fontweight="bold", pad=8, color=PALETTE["text"]
     )
 
     # Bottom panel: Push-Down List pointer (`PUSHLOC`) & VAC scratch registers over instruction steps
@@ -426,26 +428,33 @@ def plot_interpreter_trace(interp: TinyAGCInterpreter) -> plt.Figure:
     pushlocs = [r.pushloc for r in rows]
     op_labels = [f"{r.step_idx}:{r.opcode}" for r in rows]
 
-    ax_pd.step(steps_x, pushlocs, where="mid", color="#d97706", lw=2.2,
+    ax_pd.step(steps_x, pushlocs, where="mid", color=PALETTE["lm"], lw=2.2,
                label="PUSHLOC Word Offset in 44-Word VAC Area")
-    ax_pd.fill_between(steps_x, pushlocs, step="mid", color="#fde68a", alpha=0.45)
-    ax_pd.scatter(steps_x, pushlocs, color="#b45309", s=35, zorder=4)
+    ax_pd.fill_between(steps_x, pushlocs, step="mid", color=PALETTE["lm"], alpha=0.18)
+    ax_pd.scatter(steps_x, pushlocs, color=PALETTE["lm"], s=35, zorder=4)
 
     # Annotate key Push-Down List events
-    ax_pd.annotate("PDDL ZEROVECS\n(Push VGU -> +6 words)", xy=(8, 6), xytext=(5.0, 6.8),
-                   arrowprops={"arrowstyle": "->", "color": "#b45309"}, fontsize=8, fontweight="bold")
-    ax_pd.annotate("VDEF pops Y,Z\n(-4 words)", xy=(9, 2), xytext=(9.2, 4.6),
-                   arrowprops={"arrowstyle": "->", "color": "#b45309"}, fontsize=8, fontweight="bold")
-    ax_pd.annotate("PUSH (R - LAND)\n(+6 words -> 8D)", xy=(14, 8), xytext=(11.5, 8.5),
-                   arrowprops={"arrowstyle": "->", "color": "#b45309"}, fontsize=8, fontweight="bold")
-    ax_pd.annotate("STOVL RANGEDSP\n(Implicit PUSHUP -6 words!)", xy=(19, 2), xytext=(16.2, 6.0),
-                   arrowprops={"arrowstyle": "->", "color": "#dc2626"}, fontsize=8,
-                   fontweight="bold", color="#991b1b")
+    ax_pd.annotate("PDDL ZEROVECS\n(Push VGU -> +6 words)", xy=(8, 6), xytext=(4.8, 6.8),
+                   arrowprops={"arrowstyle": "->", "color": PALETTE["lm"], "lw": 1.2},
+                   fontsize=8, fontweight="bold", color=PALETTE["lm"],
+                   bbox={"boxstyle": "round,pad=0.22", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["lm"], "alpha": 0.9})
+    ax_pd.annotate("VDEF pops Y,Z\n(-4 words)", xy=(9, 2), xytext=(9.2, 4.5),
+                   arrowprops={"arrowstyle": "->", "color": PALETTE["csm"], "lw": 1.2},
+                   fontsize=8, fontweight="bold", color=PALETTE["csm"],
+                   bbox={"boxstyle": "round,pad=0.22", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["csm"], "alpha": 0.9})
+    ax_pd.annotate("PUSH (R - LAND)\n(+6 words -> 8D)", xy=(14, 8), xytext=(11.2, 8.3),
+                   arrowprops={"arrowstyle": "->", "color": PALETTE["lm"], "lw": 1.2},
+                   fontsize=8, fontweight="bold", color=PALETTE["lm"],
+                   bbox={"boxstyle": "round,pad=0.22", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["lm"], "alpha": 0.9})
+    ax_pd.annotate("STOVL RANGEDSP\n(Implicit PUSHUP -6 words!)", xy=(19, 2), xytext=(15.8, 5.8),
+                   arrowprops={"arrowstyle": "->", "color": PALETTE["alarm"], "lw": 1.2},
+                   fontsize=8, fontweight="bold", color=PALETTE["alarm"],
+                   bbox={"boxstyle": "round,pad=0.22", "facecolor": PALETTE["fig_bg"], "edgecolor": PALETTE["alarm"], "alpha": 0.9})
 
     ax_pd.set_xticks(steps_x)
     ax_pd.set_xticklabels(op_labels, rotation=32, ha="right", fontsize=7.8, family="monospace")
     ax_pd.set_ylabel("PUSHLOC (VAC Words)")
-    ax_pd.set_ylim(-0.5, 10.5)
+    ax_pd.set_ylim(-0.5, 10.8)
     ax_pd.set_xlabel("Interpretive Instruction Sequence in `RGVGCALC` (followed by Basic CA FIXLOC / TS PUSHLOC)")
     ax_pd.legend(loc="upper right", fontsize=8.5)
 

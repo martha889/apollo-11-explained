@@ -1,0 +1,47 @@
+/* Code */
+.code { min-height: 0; }
+.code-head { display: flex; flex-direction: column; gap: 1px; padding: 6px 12px; border-bottom: 1px solid var(--line); }
+.code-head .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.code-head h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 16px; line-height: 1.2; letter-spacing: 0.03em; text-wrap: balance; }
+.code-head .file { font-family: var(--font-mono); font-size: 11.5px; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
+.tabs { display: flex; gap: 4px; }
+.tab { background: transparent; border: 1px solid var(--line); border-radius: 3px; padding: 1px 9px; font-family: var(--font-display); font-weight: 600; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+.tab[aria-selected="true"] { border-color: var(--amber); color: var(--amber); }
+.listing { flex: 1; min-height: 0; overflow: auto; margin: 0; padding: 6px 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.5; background: var(--panel-2); }
+.listing .ln { display: block; white-space: pre; padding: 0 12px 0 0; }
+.listing .no { display: inline-block; width: 5.2em; padding-right: 1em; text-align: right; color: var(--faint); user-select: none; position: sticky; left: 0; background: var(--panel-2); }
+.listing .cm { color: #7f8ea6; }
+.listing .lb { color: var(--amber); }
+.listing .kw { color: var(--csm); }
+.listing .ln.cur { background: rgba(242, 177, 60, 0.14); }
+.listing .ln.cur .no { color: var(--amber); background: #2a2417; }
+.listing .ln.entry .no { color: var(--amber); }
+.code-foot { padding: 6px 12px 7px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.code-foot p { margin: 0; max-width: 75ch; font-size: 12.5px; line-height: 1.35; }
+.code-foot .note { color: var(--muted); font-size: 11px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+
+/* ---------- Motion & polish: code panel ---------- */
+.code-head { position: relative; }
+.code-prog { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: rgba(242,177,60,0.1); overflow: hidden; pointer-events: none; }
+.code-prog i { display: block; width: 100%; height: 100%; background: var(--amber); transform: scaleX(0); transform-origin: 0 50%; box-shadow: 0 0 6px rgba(242,177,60,0.7); }
+.listing { position: relative; scroll-behavior: smooth; }
+.listing .hl { position: absolute; left: 0; top: 0; height: 18px; width: 100%; pointer-events: none; z-index: 1;
+  background: linear-gradient(90deg, rgba(242,177,60,0.2), rgba(242,177,60,0.1) 40%, rgba(242,177,60,0.1));
+  box-shadow: inset 2px 0 0 var(--amber); transform: translateY(0); will-change: transform; opacity: 0;
+  transition: transform 240ms var(--ease), opacity 160ms; }
+.listing .hl.on { opacity: 1; }
+.listing .hl.snap { transition: none; }
+.listing .ln.cur { background: none; }
+.listing .no { transition: color 200ms, background-color 240ms; z-index: 2; }
+.listing .ln.cur .no { background: #2a2417; }
+.swap-fade { animation: codeFade 300ms var(--ease) both; }
+.listing.swap-fade { animation-duration: 240ms; }
+.code-head h2.swap-fade { animation-name: titleIn; }
+@keyframes codeFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes titleIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.tab { position: relative; transition: color 200ms, border-color 200ms, background-color 200ms; }
+.tab:hover { color: var(--fg); }
+.tab::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: 1px; height: 2px; border-radius: 1px; background: var(--amber); transform: scaleX(0); transform-origin: 50% 50%; transition: transform 260ms var(--ease); }
+.tab[aria-selected="true"]::after { transform: scaleX(1); }
+.tab[aria-selected="true"] { background: rgba(242,177,60,0.06); }

@@ -35,8 +35,10 @@ import matplotlib.pyplot as plt
 from common import (
     REPO,
     MU_EARTH,
+    PALETTE,
     R_EARTH,
     G0,
+    glow_line,
     src,
     step,
     save,
@@ -620,12 +622,12 @@ def simulate_lunar_return_entry(
 # ---------------------------------------------------------------------------
 
 PHASE_COLORS = {
-    "P63": "#64748b",
-    "P64": "#dc2626",
-    "P65": "#d97706",
-    "P66": "#7c3aed",
-    "P67": "#059669",
-    "STEEROFF": "#0f766e",
+    "P63": PALETTE["p63"],
+    "P64": PALETTE["alarm"],
+    "P65": PALETTE["lm"],
+    "P66": PALETTE["purple"],
+    "P67": PALETTE["dsky"],
+    "STEEROFF": PALETTE["cyan"],
 }
 
 PHASE_LABELS = {
@@ -646,11 +648,12 @@ def plot_entry_profile_phases(history, transitions, steeroff_event):
     gamma_deg = history["gamma_deg"]
     phases = history["phase"]
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12.0, 8.0), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12.0, 8.2), sharex=True)
     fig.suptitle(
         "Comanche055 P61-P67.agc & REENTRY_CONTROL.agc — Lunar-Return Skip Entry Profile",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Panel 1: Altitude vs Downrange colored by active AGC program phase
@@ -658,11 +661,12 @@ def plot_entry_profile_phases(history, transitions, steeroff_event):
         idx = [i for i, p in enumerate(phases) if p == ph_code]
         if not idx:
             continue
-        ax1.plot(
+        glow_line(
+            ax1,
             x_km[idx],
             alt_km[idx],
             color=PHASE_COLORS[ph_code],
-            lw=3.0,
+            lw=2.8,
             label=PHASE_LABELS[ph_code],
         )
 
@@ -675,58 +679,63 @@ def plot_entry_profile_phases(history, transitions, steeroff_event):
         "P67": (60, 18),
     }
     for ph_name, t_tr, x_tr, h_tr in transitions:
-        col = PHASE_COLORS.get(ph_name[:3], "#1e293b")
+        col = PHASE_COLORS.get(ph_name[:3], PALETTE["text"])
         ax1.plot(x_tr, h_tr, "o", color=col, ms=7, zorder=5)
         dx_pt, dy_pt = offsets.get(ph_name, (20, 10))
         ax1.annotate(
             f"{ph_name}\n(t={t_tr:.0f}s, h={h_tr:.1f}km)",
             xy=(x_tr, h_tr),
             xytext=(x_tr + dx_pt, h_tr + dy_pt),
-            arrowprops=dict(arrowstyle="->", color=col, lw=1.2),
-            fontsize=8.2,
+            arrowprops=dict(arrowstyle="->", color=col, lw=1.1),
+            fontsize=8.1,
             fontweight="bold",
             color=col,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=col, alpha=0.92),
         )
 
     # Annotate CMC STEEROFF (V < 1,000 ft/s = 304.8 m/s)
     if steeroff_event is not None:
         t_so, x_so, h_so, v_so = steeroff_event
-        ax1.plot(x_so, h_so, "D", color="#0f766e", ms=7, zorder=6)
+        col_so = PHASE_COLORS["STEEROFF"]
+        ax1.plot(x_so, h_so, "D", color=col_so, ms=7, zorder=6)
         ax1.annotate(
             f"CMC STEEROFF (V < 1,000 ft/s)\n(t={t_so:.0f}s, h={h_so:.1f} km, V={v_so:.0f} m/s)",
             xy=(x_so, h_so),
-            xytext=(x_so - 680, h_so + 12),
-            arrowprops=dict(arrowstyle="->", color="#0f766e", lw=1.2),
-            fontsize=8.2,
+            xytext=(x_so - 680, h_so + 16),
+            arrowprops=dict(arrowstyle="->", color=col_so, lw=1.1),
+            fontsize=8.1,
             fontweight="bold",
-            color="#0f766e",
+            color=col_so,
+            bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=col_so, alpha=0.92),
         )
 
     # Annotate ELS Barometric Drogue Deployment (~24,000 ft = 7.3 km)
-    ax1.plot(x_km[-1], alt_km[-1], "s", color="#1e40af", ms=8, zorder=6)
+    col_els = PALETTE["csm"]
+    ax1.plot(x_km[-1], alt_km[-1], "s", color=col_els, ms=8, zorder=6)
     ax1.annotate(
         f"ELS Drogue Deploy (~24,000 ft)\n(t={history['t'][-1]:.0f}s, h={alt_km[-1]:.1f} km, "
         f"Range={x_km[-1]:.1f} km)",
         xy=(x_km[-1], alt_km[-1]),
         xytext=(x_km[-1] - 720, alt_km[-1] - 2),
-        arrowprops=dict(arrowstyle="->", color="#1e40af", lw=1.2),
-        fontsize=8.2,
+        arrowprops=dict(arrowstyle="->", color=col_els, lw=1.1),
+        fontsize=8.1,
         fontweight="bold",
-        color="#1e40af",
+        color=col_els,
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=col_els, alpha=0.92),
     )
 
     ax1.set_ylabel("Altitude Above Earth (km)")
-    ax1.set_ylim(0, 136)
+    ax1.set_ylim(0, 138)
     ax1.set_title("Altitude vs Downrange Distance Across Entry Guidance Phases (P63 -> P67 -> ELS)")
     ax1.legend(loc="upper right", fontsize=8.0)
 
     # Panel 2: Inertial Velocity and Flight-Path Angle vs Downrange
-    color_v = "#2563eb"
-    color_g = "#dc2626"
-    ax2.plot(x_km, v_kms, color=color_v, lw=2.2, label="Inertial Velocity V (km/s)")
+    color_v = PALETTE["csm"]
+    color_g = PALETTE["alarm"]
+    glow_line(ax2, x_km, v_kms, color=color_v, lw=2.2, label="Inertial Velocity V (km/s)")
     ax2.axhline(
         VSAT_ENTRY_MS / 1e3,
-        color="#64748b",
+        color=PALETTE["muted"],
         ls=":",
         lw=1.2,
         label=f"Circular Satellite Speed V_sat ({VSAT_ENTRY_MS/1e3:.2f} km/s)",
@@ -737,8 +746,11 @@ def plot_entry_profile_phases(history, transitions, steeroff_event):
     ax2.set_title("Kinetic Energy Dissipation & Flight-Path Angle Pullout/Skip")
 
     ax2_r = ax2.twinx()
+    ax2_r.spines["top"].set_visible(False)
+    ax2_r.spines["right"].set_visible(True)
+    ax2_r.spines["right"].set_color(PALETTE["spine"])
     ax2_r.plot(x_km, gamma_deg, "--", color=color_g, lw=1.8, label="Flight-Path Angle gamma (deg)")
-    ax2_r.axhline(0.0, color=color_g, alpha=0.25, lw=0.8)
+    ax2_r.axhline(0.0, color=color_g, alpha=0.35, lw=0.8)
     ax2_r.set_ylabel("Flight-Path Angle (deg)", color=color_g)
     ax2_r.tick_params(axis="y", labelcolor=color_g)
     ax2_r.set_ylim(-25.0, 6.0)
@@ -760,11 +772,12 @@ def plot_entry_gload_and_bank(history, transitions, steeroff_event):
     ld_vert = history["ld_vert"]
     phases = history["phase"]
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12.0, 7.6), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12.0, 7.8), sharex=True)
     fig.suptitle(
         "Comanche055 REENTRY_CONTROL.agc — Double-Pulse G-Load & Lift-Vector Roll Control",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # Shade phase background bands
@@ -778,7 +791,7 @@ def plot_entry_gload_and_bank(history, transitions, steeroff_event):
 
     for ph_code, t0_p, t1_p in phase_spans:
         for ax in (ax1, ax2):
-            ax.axvspan(t0_p, t1_p, color=PHASE_COLORS[ph_code], alpha=0.10)
+            ax.axvspan(t0_p, t1_p, color=PHASE_COLORS[ph_code], alpha=0.09)
         lbl_disp = "STEER\nOFF" if ph_code == "STEEROFF" else ph_code
         ax1.text(
             0.5 * (t0_p + t1_p),
@@ -792,34 +805,38 @@ def plot_entry_gload_and_bank(history, transitions, steeroff_event):
         )
 
     # Panel 1: Sensed Aerodynamic G-Load vs Time
-    ax1.plot(t, g_load, color="#dc2626", lw=2.3, label="Sensed Aerodynamic Deceleration (Earth g)")
-    ax1.axhline(0.05, color="#64748b", ls="--", lw=1.0, label="0.05g KATEST Threshold (P63 -> P64)")
+    glow_line(ax1, t, g_load, color=PALETTE["alarm"], lw=2.3, label="Sensed Aerodynamic Deceleration (Earth g)")
+    ax1.axhline(0.05, color=PALETTE["muted"], ls="--", lw=1.0, label="0.05g KATEST Threshold (P63 -> P64)")
 
     # Annotate 1st and 2nd g-peaks
     mid_split = np.searchsorted(t, 200.0)
     idx_g1 = int(np.argmax(g_load[:mid_split]))
     idx_g2 = mid_split + int(np.argmax(g_load[mid_split:]))
 
-    ax1.plot(t[idx_g1], g_load[idx_g1], "o", color="#b91c1c", ms=7)
+    col_g1 = PALETTE["alarm"]
+    ax1.plot(t[idx_g1], g_load[idx_g1], "o", color=col_g1, ms=7, zorder=5)
     ax1.annotate(
         f"1st G-Peak (P64 Pullout)\n{g_load[idx_g1]:.2f} g at t={t[idx_g1]:.0f} s",
         xy=(t[idx_g1], g_load[idx_g1]),
-        xytext=(t[idx_g1] + 28, g_load[idx_g1] - 1.15),
-        arrowprops=dict(arrowstyle="->", color="#b91c1c", lw=1.2),
+        xytext=(t[idx_g1] + 24, g_load[idx_g1] - 0.85),
+        arrowprops=dict(arrowstyle="->", color=col_g1, lw=1.2),
         fontsize=8.5,
         fontweight="bold",
-        color="#b91c1c",
+        color=col_g1,
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=col_g1, alpha=0.92),
     )
 
-    ax1.plot(t[idx_g2], g_load[idx_g2], "o", color="#059669", ms=7)
+    col_g2 = PALETTE["dsky"]
+    ax1.plot(t[idx_g2], g_load[idx_g2], "o", color=col_g2, ms=7, zorder=5)
     ax1.annotate(
         f"2nd G-Peak (P67 Final Entry)\n{g_load[idx_g2]:.2f} g at t={t[idx_g2]:.0f} s",
         xy=(t[idx_g2], g_load[idx_g2]),
         xytext=(t[idx_g2] + 22, g_load[idx_g2] + 0.75),
-        arrowprops=dict(arrowstyle="->", color="#059669", lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=col_g2, lw=1.2),
         fontsize=8.5,
         fontweight="bold",
-        color="#059669",
+        color=col_g2,
+        bbox=dict(boxstyle="round,pad=0.22", facecolor=PALETTE["fig_bg"], edgecolor=col_g2, alpha=0.92),
     )
 
     ax1.set_ylabel("Sensed Deceleration (g)")
@@ -828,25 +845,29 @@ def plot_entry_gload_and_bank(history, transitions, steeroff_event):
     ax1.legend(loc="center right", fontsize=8.5)
 
     # Panel 2: Commanded Bank Angle |ROLLC| and Vertical L/D (LIMITL/D)
-    color_roll = "#2563eb"
-    color_ld = "#d97706"
-    ax2.plot(
+    color_roll = PALETTE["csm"]
+    color_ld = PALETTE["lm"]
+    glow_line(
+        ax2,
         t,
         roll_deg,
         color=color_roll,
         lw=2.2,
         label="Commanded Bank Angle |ROLLC| (deg, LIMITL/D)",
     )
-    ax2.axhline(90.0, color="#64748b", ls=":", lw=1.0, label="90 deg Bank (Zero Vertical Lift)")
+    ax2.axhline(90.0, color=PALETTE["muted"], ls=":", lw=1.0, label="90 deg Bank (Zero Vertical Lift)")
     if steeroff_event is not None:
-        ax2.axvline(steeroff_event[0], color="#0f766e", ls="--", lw=1.3, label="CMC STEEROFF (V < 1,000 ft/s)")
+        ax2.axvline(steeroff_event[0], color=PALETTE["cyan"], ls="--", lw=1.3, label="CMC STEEROFF (V < 1,000 ft/s)")
     ax2.set_xlabel("Time Since 400,000 ft Entry Interface (s)")
     ax2.set_ylabel("Bank Angle |ROLLC| (deg)", color=color_roll)
     ax2.tick_params(axis="y", labelcolor=color_roll)
-    ax2.set_ylim(-5, 185)
+    ax2.set_ylim(-8, 185)
     ax2.set_title("LIMITL/D Roll Steering — Lift-Up (0 deg) vs Lift-Down (>90 deg)")
 
     ax2_r = ax2.twinx()
+    ax2_r.spines["top"].set_visible(False)
+    ax2_r.spines["right"].set_visible(True)
+    ax2_r.spines["right"].set_color(PALETTE["spine"])
     ax2_r.plot(
         t,
         ld_vert,
@@ -862,7 +883,7 @@ def plot_entry_gload_and_bank(history, transitions, steeroff_event):
 
     l1, lb1 = ax2.get_legend_handles_labels()
     l2, lb2 = ax2_r.get_legend_handles_labels()
-    ax2.legend(l1 + l2, lb1 + lb2, loc="lower left", fontsize=8.0)
+    ax2.legend(l1 + l2, lb1 + lb2, loc="lower center", bbox_to_anchor=(0.64, 0.03), fontsize=8.0)
 
     fig.tight_layout()
     save(fig, "csm_05_entry_gload_and_bank")
@@ -886,76 +907,78 @@ def plot_vrefer_comparison(real_vref):
     rrem2_on_v = np.interp(_V_TAB, _V_TAB2, _RREM_TAB2)
     sim_f2 = np.maximum((rrem2_on_v - _RREM_TAB) / 0.04, 15.0)
 
-    fig, axes = plt.subplots(2, 3, figsize=(14.0, 7.8), sharex=True)
+    fig, axes = plt.subplots(2, 3, figsize=(14.4, 7.8), sharex=True)
     fig.suptitle(
         "Comanche055 REENTRY_CONTROL.agc @ VREFER — Decoded AGC Table vs Simulation Reference",
         fontsize=13,
         fontweight="bold",
+        color=PALETTE["text"],
     )
 
     # 1. Reference Range-to-Go RTOGO (km)
     ax = axes[0, 0]
-    ax.plot(v_real_kms, real_vref["rtogo_km"][:12], "o-", color="#2563eb", lw=2.0, ms=5,
-            label="Real AGC VREFER (Pts 1-12)")
-    ax.plot(v_sim_kms, _RREM_TAB, "--", color="#d97706", lw=2.0,
+    glow_line(ax, v_real_kms, real_vref["rtogo_km"][:12], marker="o", color=PALETTE["csm"], lw=2.0, ms=4.5,
+              label="Real AGC VREFER (Pts 1-12)")
+    ax.plot(v_sim_kms, _RREM_TAB, "--", color=PALETTE["lm"], lw=2.0,
             label="Sim Self-Generated Table")
     ax.set_ylabel("Reference Range-to-Go (km)")
-    ax.set_title("1. RTOGO: Reference Range-to-Go")
+    ax.set_title("1. RTOGO: Reference Range-to-Go", fontsize=10.8)
     ax.legend(loc="upper left", fontsize=8)
 
     # 2. Reference Drag Deceleration AREF (g)
     ax = axes[0, 1]
-    ax.plot(v_real_kms, real_vref["aref_g"][:12], "o-", color="#dc2626", lw=2.0, ms=5,
-            label="Real AGC VREFER (-AREF/805)")
-    ax.plot(v_sim_kms, _D_TAB / G0, "--", color="#d97706", lw=2.0,
+    glow_line(ax, v_real_kms, real_vref["aref_g"][:12], marker="o", color=PALETTE["alarm"], lw=2.0, ms=4.5,
+              label="Real AGC VREFER (-AREF/805)")
+    ax.plot(v_sim_kms, _D_TAB / G0, "--", color=PALETTE["lm"], lw=2.0,
             label="Sim Self-Generated D_ref")
     ax.set_ylabel("Reference Drag (Earth g)")
-    ax.set_title("2. AREF: Reference Drag Deceleration")
+    ax.set_ylim(0.0, 4.6)
+    ax.set_title("2. AREF: Reference Drag Deceleration", fontsize=10.8)
     ax.legend(loc="upper left", fontsize=8)
 
     # 3. Reference Altitude Rate RDOTREF (m/s)
     ax = axes[0, 2]
-    ax.plot(v_real_kms, real_vref["rdot_ref_ms"][:12], "o-", color="#059669", lw=2.0, ms=5,
-            label="Real AGC VREFER (RDOTREF)")
-    ax.plot(v_sim_kms, _RDOT_TAB, "--", color="#d97706", lw=2.0,
+    glow_line(ax, v_real_kms, real_vref["rdot_ref_ms"][:12], marker="o", color=PALETTE["dsky"], lw=2.0, ms=4.5,
+              label="Real AGC VREFER (RDOTREF)")
+    ax.plot(v_sim_kms, _RDOT_TAB, "--", color=PALETTE["lm"], lw=2.0,
             label="Sim Self-Generated rdot_ref")
     ax.set_ylabel("Reference Altitude Rate (m/s)")
-    ax.set_title("3. RDOTREF: Reference Sink Rate")
+    ax.set_title("3. RDOTREF: Reference Sink Rate", fontsize=10.8)
     ax.legend(loc="lower left", fontsize=8)
 
     # 4. Drag Sensitivity Partial dR/dA (km / (m/s^2))
     ax = axes[1, 0]
-    ax.plot(v_real_kms, real_vref["dr_da_km_per_ms2"][:12], "o-", color="#7c3aed", lw=2.0, ms=5,
-            label="Real AGC VREFER (DRANGE/DA)")
-    ax.plot(v_sim_kms, sim_dr_da, "--", color="#d97706", lw=2.0,
+    glow_line(ax, v_real_kms, real_vref["dr_da_km_per_ms2"][:12], marker="o", color=PALETTE["purple"], lw=2.0, ms=4.5,
+              label="Real AGC VREFER (DRANGE/DA)")
+    ax.plot(v_sim_kms, sim_dr_da, "--", color=PALETTE["lm"], lw=2.0,
             label="Sim dR/dD Approximation")
     ax.set_xlabel("Inertial Velocity V (km/s)")
     ax.set_ylabel("dR/dA (km per m/s^2)")
-    ax.set_title("4. F1 (DRANGE/DA): Drag Sensitivity")
+    ax.set_title("4. F1 (DRANGE/DA): Drag Sensitivity", fontsize=10.8)
     ax.legend(loc="lower left", fontsize=8)
 
     # 5. Altitude-Rate Sensitivity Partial dR/drdot (km / (m/s))
     ax = axes[1, 1]
-    ax.plot(v_real_kms, real_vref["dr_drdot_km_per_ms"][:12], "o-", color="#0f766e", lw=2.0, ms=5,
-            label="Real AGC VREFER (DRANGE/DRDOT)")
-    ax.plot(v_sim_kms, sim_dr_drdot, "--", color="#d97706", lw=2.0,
+    glow_line(ax, v_real_kms, real_vref["dr_drdot_km_per_ms"][:12], marker="o", color=PALETTE["cyan"], lw=2.0, ms=4.5,
+              label="Real AGC VREFER (DRANGE/DRDOT)")
+    ax.plot(v_sim_kms, sim_dr_drdot, "--", color=PALETTE["lm"], lw=2.0,
             label="Sim dR/drdot Approximation")
     ax.set_xlabel("Inertial Velocity V (km/s)")
     ax.set_ylabel("dR/drdot (km per m/s)")
-    ax.set_title("5. F2 (DRANGE/DRDOT): Sink-Rate Sensitivity")
+    ax.set_title("5. F2 (DRANGE/DRDOT): Sink-Rate Sensitivity", fontsize=10.8)
     ax.legend(loc="upper left", fontsize=8)
 
     # 6. L/D Sensitivity Partial dR/d(L/D) (km per unit L/D)
     ax = axes[1, 2]
-    ax.plot(v_real_kms, real_vref["dr_dld_raw_km"][:12], "o-", color="#1d4ed8", lw=2.0, ms=5,
-            label="Real AGC Y = 2700 * val (km)")
-    ax.plot(v_real_kms, real_vref["dr_dld_eff_km"][:12], "s:", color="#64748b", lw=1.6, ms=4,
+    glow_line(ax, v_real_kms, real_vref["dr_dld_raw_km"][:12], marker="o", color=PALETTE["csm"], lw=2.0, ms=4.5,
+              label="Real AGC Y = 2700 * val (km)")
+    ax.plot(v_real_kms, real_vref["dr_dld_eff_km"][:12], "s:", color=PALETTE["muted"], lw=1.6, ms=4,
             label="Real AGC Effective Y/4 (SR3/SL5)")
-    ax.plot(v_sim_kms, sim_f2, "--", color="#d97706", lw=2.0,
+    ax.plot(v_sim_kms, sim_f2, "--", color=PALETTE["lm"], lw=2.0,
             label="Sim dR/d(L/D) Sensitivity")
     ax.set_xlabel("Inertial Velocity V (km/s)")
     ax.set_ylabel("dR/d(L/D) (km per unit L/D)")
-    ax.set_title("6. Y (DRANGE/D(L/D)): Lift-to-Drag Sensitivity")
+    ax.set_title("6. Y (DRANGE/D(L/D)): L/D Sensitivity", fontsize=10.8)
     ax.legend(loc="upper left", fontsize=7.8)
 
     fig.tight_layout()

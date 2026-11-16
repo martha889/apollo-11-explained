@@ -1,0 +1,54 @@
+@media (max-width: 960px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .traj { height: 58vh; min-height: 360px; }
+  .right { height: auto; min-height: 0; grid-template-rows: auto auto; }
+  .code .listing { min-height: 220px; max-height: 420px; }
+}
+@media (max-width: 700px) {
+  :root { --bar-h: 132px; }
+  .dskys { grid-template-columns: minmax(0, 1fr); }
+  .dsky-toggle { display: flex; }
+  .dskys[data-show="CM"] .dsky-card[data-c="LM"], .dskys[data-show="LM"] .dsky-card[data-c="CM"] { display: none; }
+  .clock .get { font-size: 24px; }
+  .ticks span { display: none; }
+  .ptime { margin-left: 0; }
+  .jump { flex: 1 1 130px; max-width: none; }
+  #theatre { display: none; }
+  .code-foot .note { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .event-strip { transition: none; }
+}
+
+/* ---------- Theatre mode (F): trajectory only, right column hidden ---------- */
+.app.theatre .right { display: none; }
+.app.theatre .stage { grid-template-columns: minmax(0, 1fr); }
+.app.theatre .traj { height: max(380px, calc(100vh - var(--bar-h) - 130px)); height: max(380px, calc(100dvh - var(--bar-h) - 130px)); }
+@media (max-width: 1100px) {
+  .app.theatre .traj { height: max(340px, calc(100dvh - var(--bar-h) - 130px)); }
+}
+@media (max-width: 700px) {
+  .clock .mpct { font-size: 10.5px; }
+  .tip span { max-width: 60vw; }
+}
+@media (max-width: 480px) {
+  .app, .transport {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+  .brand h1 { font-size: 22px; }
+  .brand span, .clock .utc { font-size: 11px; }
+  .clock .get { font-size: 22px; }
+  .top { gap: 6px 12px; }
+  .controls { gap: 6px 8px; }
+  .btn.primary { min-width: 72px; }
+  .speed button { padding: 0 7px; }
+}
+
+/* ---------- Reduced motion: all new motion off ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  body::after { display: none; }
+  .dsky-card.alarm-pulse .dsky::before { opacity: 1; }
+  .rec.live i { box-shadow: none; }
+}

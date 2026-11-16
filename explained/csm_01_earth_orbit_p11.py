@@ -17,7 +17,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 
-from common import G0, MU_EARTH, R_EARTH, save, src, step
+from common import G0, MU_EARTH, PALETTE, R_EARTH, glow_line, save, src, step
 
 # ---------------------------------------------------------------------------
 # Constants from Comanche055/P11.agc and Comanche055/P34-35_P74-75.agc
@@ -339,42 +339,45 @@ def plot_p11_ascent_monitor(sim: dict[str, np.ndarray]) -> None:
     fig, axes = plt.subplots(3, 1, figsize=(11, 8.5), sharex=True)
 
     events = [
-        (10.0, "Pitch/Roll Start\n(RPSTART)", "#555555"),
-        (133.0, "Poly End\n(POLYSTOP)", "#555555"),
-        (162.0, "S-IC / S-II Staging\n(2 min 42 s)", "#d95f02"),
-        (548.0, "S-II / S-IVB Staging\n(9 min 08 s)", "#7570b3"),
-        (700.0, "EOI Cutoff\n(185.2 km / 100 NM)", "#1b9e77"),
+        (10.0, "Pitch/Roll Start\n(RPSTART)", PALETTE["muted"]),
+        (133.0, "Poly End\n(POLYSTOP)", PALETTE["muted"]),
+        (162.0, "S-IC / S-II Staging\n(2 min 42 s)", PALETTE["lm"]),
+        (548.0, "S-II / S-IVB Staging\n(9 min 08 s)", PALETTE["purple"]),
+        (700.0, "EOI Cutoff\n(185.2 km / 100 NM)", PALETTE["dsky"]),
     ]
 
     # Panel 1: Altitude H (Noun 62 R3)
     ax0 = axes[0]
-    ax0.plot(t, sim["alt_km"], color="#1f77b4", lw=2.2, label="Altitude H above pad (km)")
-    ax0.axhline(185.2, color="#1b9e77", ls=":", lw=1.2, label="Target Parking Orbit (185.2 km / 100.0 NM)")
+    glow_line(ax0, t, sim["alt_km"], color=PALETTE["csm"], lw=2.2, label="Altitude H above pad (km)")
+    ax0.axhline(185.2, color=PALETTE["dsky"], ls=":", lw=1.3, label="Target Parking Orbit (185.2 km / 100.0 NM)")
     ax0.set_ylim(-10, 245)
     ax0.set_ylabel("Altitude H (km)")
     ax0.set_title("Apollo 11 CMC P11: Earth Orbit Insertion Monitor (Noun 62 Display vs Time)")
     ax0_nm = ax0.twinx()
     ax0_nm.set_ylim(np.array(ax0.get_ylim()) * (1000.0 * M_TO_NM))
-    ax0_nm.set_ylabel("N62 R3: Altitude (NM)", color="#1f77b4")
+    ax0_nm.set_ylabel("N62 R3: Altitude (NM)", color=PALETTE["csm"])
+    ax0_nm.tick_params(axis="y", colors=PALETTE["csm"])
+    ax0_nm.spines["right"].set_visible(True)
+    ax0_nm.spines["right"].set_color(PALETTE["spine"])
     ax0_nm.grid(False)
     ax0.legend(loc="upper left")
 
     # Panel 2: Inertial Velocity VI (Noun 62 R1) and Altitude Rate HDOT (Noun 62 R2)
     ax1 = axes[1]
-    ax1.plot(t, sim["vi_m_s"], color="#e41a1c", lw=2.2, label="N62 R1: Inertial Velocity $V_I = |\\mathbf{v}_N|$ (m/s)")
-    ax1.plot(t, sim["hdot_m_s"] * 10.0, color="#ff7f00", lw=1.8, ls="--",
-             label="N62 R2: Altitude Rate $\\dot{h} = \\hat{\\mathbf{r}}_N \\cdot \\mathbf{v}_N \\times 10$ (m/s)")
+    glow_line(ax1, t, sim["vi_m_s"], color=PALETTE["csm"], lw=2.2, label="N62 R1: Inertial Velocity $V_I = |\\mathbf{v}_N|$ (m/s)")
+    glow_line(ax1, t, sim["hdot_m_s"] * 10.0, color=PALETTE["lm"], lw=1.8, ls="--",
+              label="N62 R2: Altitude Rate $\\dot{h} = \\hat{\\mathbf{r}}_N \\cdot \\mathbf{v}_N \\times 10$ (m/s)")
     ax1.set_ylabel("Velocity (m/s)")
-    ax1.legend(loc="upper left")
+    ax1.legend(loc="upper right")
 
     # Panel 3: Flight-path angle gamma and S-IC pitch polynomial
     ax2 = axes[2]
-    ax2.plot(t, sim["gamma_deg"], color="#2ca02c", lw=2.2,
-             label="Inertial Flight-Path Angle $\\gamma = \\arcsin(\\dot{h}/V_I)$ (deg)")
+    glow_line(ax2, t, sim["gamma_deg"], color=PALETTE["dsky"], lw=2.2,
+              label="Inertial Flight-Path Angle $\\gamma = \\arcsin(\\dot{h}/V_I)$ (deg)")
     poly_mask = sim["poly_active"]
-    ax2.plot(t[poly_mask], sim["poly_pitch_deg"][poly_mask], color="#984ea3", lw=2.0, ls="-.",
-             label="ATTDISP Pitch Polynomial $P(t)$ above horizon (10–133 s)")
-    ax2.axvspan(10.0, 133.0, color="#984ea3", alpha=0.08, label="P11 FDAI Pitch/Roll Polynomial Window")
+    glow_line(ax2, t[poly_mask], sim["poly_pitch_deg"][poly_mask], color=PALETTE["purple"], lw=2.0, ls="-.",
+              label="ATTDISP Pitch Polynomial $P(t)$ above horizon (10–133 s)")
+    ax2.axvspan(10.0, 133.0, color=PALETTE["purple"], alpha=0.12, label="P11 FDAI Pitch/Roll Polynomial Window")
     ax2.set_ylabel("Angle (deg)")
     ax2.set_xlabel("Time from Liftoff (s)")
     ax2.set_ylim(-5, 95)
@@ -382,7 +385,7 @@ def plot_p11_ascent_monitor(sim: dict[str, np.ndarray]) -> None:
 
     for ax in axes:
         for t_ev, _label, color in events:
-            ax.axvline(t_ev, color=color, ls="--", lw=1.0, alpha=0.7)
+            ax.axvline(t_ev, color=color, ls="--", lw=1.0, alpha=0.75)
 
     # Annotate key events on top panel
     offsets_y = {162.0: 32.0, 548.0: -52.0, 700.0: 26.0}
@@ -396,7 +399,8 @@ def plot_p11_ascent_monitor(sim: dict[str, np.ndarray]) -> None:
             fontsize=8.5,
             color=color,
             weight="bold",
-            arrowprops={"arrowstyle": "->", "color": color, "lw": 1.0},
+            bbox={"boxstyle": "round,pad=0.22", "facecolor": PALETTE["fig_bg"], "edgecolor": color, "alpha": 0.9},
+            arrowprops={"arrowstyle": "->", "color": color, "lw": 1.1},
         )
 
     save(fig, "csm_01_p11_ascent_monitor")

@@ -13,7 +13,7 @@ Python:
 import numpy as np
 import matplotlib.pyplot as plt
 
-from common import MU_MOON, R_MOON, save, src, step
+from common import MU_MOON, PALETTE, R_MOON, glow_line, save, src, step
 
 
 # ---------------------------------------------------------------------------
@@ -427,34 +427,37 @@ def simulate_rendezvous() -> dict:
 
 def plot_lvlh_trajectory(sim: dict) -> None:
     """Plot 1: Relative motion of the LM in the CSM-centred LVLH frame."""
-    fig, ax = plt.subplots(figsize=(11.5, 6.4))
+    fig, ax = plt.subplots(figsize=(11.8, 6.6))
 
     ax.plot(
         sim["x_ins_csi"],
         sim["z_ins_csi"],
-        color="#7f7f7f",
+        color=PALETTE["muted"],
         ls="--",
         lw=2.1,
         label="Post-P12 Insertion Coast: Perilune (16.9 km) -> Apolune (81.5 km, ~9 x 45 NM)",
     )
-    ax.plot(
+    glow_line(
+        ax,
         sim["x_csi_cdh"],
         sim["z_csi_cdh"],
-        color="#1f77b4",
+        color=PALETTE["cyan"],
         lw=2.6,
         label="Post-P32 CSI Transfer Arc (burned posigrade near apolune -> CDH)",
     )
-    ax.plot(
+    glow_line(
+        ax,
         sim["x_cdh_tpi"],
         sim["z_cdh_tpi"],
-        color="#ff7f0e",
+        color=PALETTE["lm"],
         lw=2.6,
         label="Post-P33 CDH Coelliptic Coast (DIFFALT = -27.8 km / -15 NM below 60 NM CSM)",
     )
-    ax.plot(
+    glow_line(
+        ax,
         sim["x_tpi_tpf"],
         sim["z_tpi_tpf"],
-        color="#2ca02c",
+        color=PALETTE["dsky"],
         lw=2.6,
         label="Post-P34 TPI Intercept & P35 Midcourse Trajectory",
     )
@@ -465,14 +468,22 @@ def plot_lvlh_trajectory(sim: dict) -> None:
     ax.plot(
         [x_tpi, 0.0],
         [z_tpi, 0.0],
-        color="#9467bd",
+        color=PALETTE["purple"],
         ls="--",
-        lw=1.5,
+        lw=1.6,
         label=f"TPI Line-of-Sight to CSM (ELEV E = {ELEV_TPI_DEG:.1f} deg)",
     )
 
     # Mark CSM at origin and maneuver points
-    ax.scatter([0.0], [0.0], color="#d62728", marker="*", s=180, zorder=6, label="CSM Target (60 NM Circular, LVLH Origin)")
+    ax.scatter(
+        [0.0],
+        [0.0],
+        color=PALETTE["csm"],
+        marker="*",
+        s=200,
+        zorder=6,
+        label="CSM Target (60 NM Circular, LVLH Origin)",
+    )
 
     dv_csi = sim["burns"]["dv_csi"]
     dv_cdh = sim["burns"]["dv_cdh"]
@@ -487,49 +498,68 @@ def plot_lvlh_trajectory(sim: dict) -> None:
             sim["x_ins_csi"][0],
             sim["z_ins_csi"][0],
             "P12 Insertion Perilune\n~9 x 45 NM (17 x 82 km)",
-            (14, 6),
+            (38, -2),
+            PALETTE["muted"],
         ),
         (
             sim["x_csi_cdh"][0],
             sim["z_csi_cdh"][0],
             f"P32 CSI near Apolune (CSI/B)\nSim DV = +{dv_csi:.1f} m/s (+{dv_csi*3.28084:.1f} ft/s)\n(approx. Apollo 11: ~16 m/s / 51 ft/s)",
             (-55, -56),
+            PALETTE["cyan"],
         ),
         (
             sim["x_cdh_tpi"][0],
             sim["z_cdh_tpi"][0],
             f"P33 CDH (CDHMVR)\nSim DV = {dv_cdh:+.1f} m/s ({dv_cdh*3.28084:+.1f} ft/s)\n(approx. Apollo 11: a few ft/s)",
             (-50, 22),
+            PALETTE["lm"],
         ),
         (
             x_tpi,
             z_tpi,
             f"P34 TPI (S34/35.2, E = 26.6 deg)\nSim DV = {dv_tpi_mag:.1f} m/s ({dv_tpi_mag*3.28084:.1f} ft/s)\n(approx. Apollo 11: ~7.6 m/s / 25 ft/s)",
             (-25, -56),
+            PALETTE["dsky"],
         ),
-        (sim["x_tpi_tpf"][tpm1_idx], sim["z_tpi_tpf"][tpm1_idx], "P35 TPM-1\nMidcourse", (-95, -6)),
-        (sim["x_tpi_tpf"][tpm2_idx], sim["z_tpi_tpf"][tpm2_idx], "P35 TPM-2\nMidcourse", (-100, 6)),
+        (
+            sim["x_tpi_tpf"][tpm1_idx],
+            sim["z_tpi_tpf"][tpm1_idx],
+            "P35 TPM-1\nMidcourse",
+            (-95, -6),
+            PALETTE["dsky"],
+        ),
+        (
+            sim["x_tpi_tpf"][tpm2_idx],
+            sim["z_tpi_tpf"][tpm2_idx],
+            "P35 TPM-2\nMidcourse",
+            (-100, 6),
+            PALETTE["dsky"],
+        ),
         (
             0.0,
             0.0,
             f"TPF Braking -> Docking\nSim DV = {dv_tpf_mag:.1f} m/s ({dv_tpf_mag*3.28084:.0f} ft/s)\n(approx. Apollo 11: ~9.5 m/s / 31 ft/s)",
             (-215, -2),
+            PALETTE["csm"],
         ),
     ]
-    for x_p, z_p, text, offset in pts:
-        ax.scatter([x_p], [z_p], color="#222222", s=38, zorder=5)
+    for x_p, z_p, text, offset, ev_col in pts:
+        ax.scatter([x_p], [z_p], color=ev_col, s=40, zorder=5)
         ax.annotate(
             text,
             xy=(x_p, z_p),
             xytext=offset,
             textcoords="offset points",
             fontsize=8.1,
-            arrowprops={"arrowstyle": "->", "color": "#444444", "lw": 0.9},
-            bbox={"boxstyle": "round,pad=0.22", "fc": "white", "ec": "#cccccc", "alpha": 0.92},
+            color=ev_col,
+            fontweight="bold",
+            arrowprops={"arrowstyle": "->", "color": ev_col, "lw": 1.0},
+            bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": ev_col, "alpha": 0.92},
         )
 
-    ax.axhline(0.0, color="#888888", lw=0.8, ls=":")
-    ax.axvline(0.0, color="#888888", lw=0.8, ls=":")
+    ax.axhline(0.0, color=PALETTE["muted"], lw=0.8, ls=":")
+    ax.axvline(0.0, color=PALETTE["muted"], lw=0.8, ls=":")
     ax.set_xlim(-355, 24)
     ax.set_ylim(-106, 12)
     ax.set_title("Apollo 11 Lunar Orbit Rendezvous: LM Trajectory in CSM-Centred (LVLH) Frame")
@@ -542,14 +572,15 @@ def plot_lvlh_trajectory(sim: dict) -> None:
 
 def plot_kalman_convergence(sim: dict) -> None:
     """Plot 2: Navigation error & W-matrix uncertainty shrinking as RR marks come in."""
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10.5, 7.0), sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10.8, 7.2), sharex=True)
     marks = sim["mark_idx"]
 
     # Panel 1: Position error & 1-sigma envelope from W*W^T
-    ax1.plot(
+    glow_line(
+        ax1,
         marks,
         sim["pos_err_actual"],
-        color="#1f77b4",
+        color=PALETTE["lm"],
         marker="o",
         ms=4.5,
         lw=2.0,
@@ -558,36 +589,42 @@ def plot_kalman_convergence(sim: dict) -> None:
     ax1.plot(
         marks,
         sim["pos_sigma"],
-        color="#d62728",
+        color=PALETTE["alarm"],
         ls="--",
         lw=2.0,
         label="Potter W-Matrix 1-sigma Position Uncertainty sqrt(tr(W_r W_r^T)/3) (m)",
     )
-    ax1.fill_between(marks, 0.0, sim["pos_sigma"], color="#d62728", alpha=0.10)
+    ax1.fill_between(marks, 0.0, sim["pos_sigma"], color=PALETTE["alarm"], alpha=0.12)
     ax1.annotate(
         "WLINIT (WRENDPOS = 1500 m)\nbefore first RR mark",
         xy=(0, sim["pos_sigma"][0]),
         xytext=(3.2, sim["pos_sigma"][0] * 0.82),
         fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#d62728"},
+        color=PALETTE["alarm"],
+        fontweight="bold",
+        arrowprops={"arrowstyle": "->", "color": PALETTE["alarm"], "lw": 1.1},
+        bbox={"boxstyle": "round,pad=0.22", "fc": PALETTE["fig_bg"], "ec": PALETTE["alarm"], "alpha": 0.92},
     )
     ax1.annotate(
         "Each R22LEM mark incorporates:\n1. Range (RM)\n2. Range-rate (RDOTM)\n3. Shaft & Trunnion angles\nvia INCORP1 / INCORP2",
         xy=(6, sim["pos_err_actual"][6]),
         xytext=(10.5, 580.0),
         fontsize=8.5,
-        arrowprops={"arrowstyle": "->", "color": "#1f77b4"},
-        bbox={"boxstyle": "round,pad=0.25", "fc": "white", "ec": "#cccccc"},
+        color=PALETTE["lm"],
+        fontweight="bold",
+        arrowprops={"arrowstyle": "->", "color": PALETTE["lm"], "lw": 1.1},
+        bbox={"boxstyle": "round,pad=0.25", "fc": PALETTE["fig_bg"], "ec": PALETTE["lm"], "alpha": 0.92},
     )
     ax1.set_ylabel("Position Error / Uncertainty (m)")
     ax1.set_title("P20/R22 Rendezvous Navigation: Potter Square-Root W-Matrix Filter (INCORP1 / INCORP2)")
     ax1.legend(loc="upper right", fontsize=8.5)
 
     # Panel 2: Velocity error & 1-sigma envelope from W*W^T
-    ax2.plot(
+    glow_line(
+        ax2,
         marks,
         sim["vel_err_actual"],
-        color="#2ca02c",
+        color=PALETTE["dsky"],
         marker="s",
         ms=4.5,
         lw=2.0,
@@ -596,12 +633,12 @@ def plot_kalman_convergence(sim: dict) -> None:
     ax2.plot(
         marks,
         sim["vel_sigma"],
-        color="#9467bd",
+        color=PALETTE["purple"],
         ls="--",
         lw=2.0,
         label="Potter W-Matrix 1-sigma Velocity Uncertainty sqrt(tr(W_v W_v^T)/3) (m/s)",
     )
-    ax2.fill_between(marks, 0.0, sim["vel_sigma"], color="#9467bd", alpha=0.10)
+    ax2.fill_between(marks, 0.0, sim["vel_sigma"], color=PALETTE["purple"], alpha=0.12)
     ax2.set_ylabel("Velocity Error / Uncertainty (m/s)")
     ax2.set_xlabel("Rendezvous Radar Tracking Mark Count (TRKMKCNT, ~1 mark/min in R22LEM)")
     ax2.legend(loc="upper right", fontsize=8.5)

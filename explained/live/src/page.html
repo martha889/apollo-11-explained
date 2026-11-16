@@ -1,0 +1,127 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/*__FONTS__*/
+/*__CSS__*/
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <h1>Apollo 11 Live</h1>
+      <span>Columbia &amp; Eagle, July 16–24, 1969</span>
+    </div>
+    <div class="clock" aria-live="off">
+      <span class="label lrow">Ground elapsed time<span class="rec" id="rec" aria-hidden="true"><i></i>REC</span></span>
+      <span class="get" id="get">000:00:00</span>
+      <span class="utc" id="utc">1969-07-16 13:32:00 UTC</span>
+      <span class="mpct"><b id="mpct">0.0%</b> of mission</span>
+    </div>
+    <div class="now">
+      <span class="label" id="phase-step">Phase 1 of 12</span>
+      <span class="phase" id="phase">Launch</span>
+      <span class="event" id="event"></span>
+    </div>
+  <div class="mbar" aria-hidden="true"><i id="mbar"></i></div>
+  </header>
+
+  <main class="stage">
+    <section class="panel traj" aria-label="Trajectory">
+      <div class="panel-head"><h2 id="scene-title">Trajectory</h2><span class="sub" id="scene-frame"></span></div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <canvas id="scope" role="img" aria-label="Animated trajectory of the spacecraft"></canvas>
+      </div>
+      <div class="event-strip" id="toast" aria-live="polite"></div>
+      <div class="voice" id="voice" aria-label="Voice loop: what the crew and Mission Control said"></div>
+    </section>
+
+    <div class="right">
+      <section class="panel" aria-label="Guidance computers">
+        <div class="panel-head">
+          <h2>Guidance computers (DSKY)</h2>
+          <div class="dsky-toggle" role="group" aria-label="Choose DSKY">
+            <button class="tab" id="show-cm" aria-label="Show Columbia's DSKY" aria-selected="true">Columbia</button>
+            <button class="tab" id="show-lm" aria-label="Show Eagle's DSKY" aria-selected="false">Eagle</button>
+          </div>
+        </div>
+        <div class="dskys" id="dskys" data-show="CM" style="padding: 10px 12px 12px;">
+          <div class="dsky-card" data-c="CM" id="card-CM">
+            <div class="dsky-title"><h3>Columbia · CM</h3><span class="sw">Comanche055</span><span class="badge" id="badge-CM">Active</span></div>
+            <div class="dsky" id="dsky-CM"></div>
+            <div class="caption" id="cap-CM"></div>
+          </div>
+          <div class="dsky-card" data-c="LM" id="card-LM">
+            <div class="dsky-title"><h3>Eagle · LM</h3><span class="sw">Luminary099</span><span class="badge" id="badge-LM">Off</span></div>
+            <div class="dsky" id="dsky-LM"></div>
+            <div class="caption" id="cap-LM"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel code" aria-label="Code being executed">
+        <div class="code-head">
+          <div class="row">
+            <span class="label" id="code-comp">Columbia · Comanche055</span>
+            <div class="tabs" role="tablist" aria-label="Source language">
+              <button class="tab" role="tab" id="tab-agc" aria-label="Show AGC assembly source" aria-selected="true">AGC source</button>
+              <button class="tab" role="tab" id="tab-py" aria-label="Show Python translation" aria-selected="false">Python</button>
+            </div>
+          </div>
+          <h2 id="code-title">P11</h2>
+          <span class="file" id="code-file"></span>
+          <div class="code-prog" aria-hidden="true"><i id="code-prog"></i></div>
+        </div>
+        <pre class="listing" id="listing" tabindex="0" aria-label="Source listing"></pre>
+        <div class="code-foot">
+          <p id="code-explain"></p>
+          <p class="note">The highlight steps through the routine at an illustrative pace. The real computer ran these routines over and over, for example SERVICER every 2 seconds.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="transport" role="region" aria-label="Playback controls">
+  <div class="controls">
+    <button class="btn" id="prev" aria-label="Previous event" title="Previous event (Left arrow)"><svg viewBox="0 0 16 16"><path d="M3 2h2v12H3zM14 2v12L6 8z"/></svg></button>
+    <button class="btn primary" id="play" aria-label="Play" title="Play or pause (Space)"><svg viewBox="0 0 16 16" id="play-icon"><path class="i-play" d="M4 2l10 6-10 6z"/><path class="i-pause" d="M3 2h4v12H3zM9 2h4v12H9z"/></svg><span id="play-text">Play</span></button>
+    <button class="btn" id="next" aria-label="Next event" title="Next event (Right arrow)"><svg viewBox="0 0 16 16"><path d="M11 2h2v12h-2zM2 2v12l8-6z"/></svg></button>
+    <div class="speed" role="group" aria-label="Playback speed">
+      <button id="speed-0-5" data-s="0.5" aria-pressed="false" aria-label="Half speed">0.5×</button>
+      <button id="speed-1" data-s="1" aria-pressed="true" aria-label="Normal speed">1×</button>
+      <button id="speed-2" data-s="2" aria-label="Double speed" aria-pressed="false">2×</button>
+      <button id="speed-4" data-s="4" aria-label="Four times speed" aria-pressed="false">4×</button>
+    </div>
+    <button class="btn" id="sound" aria-label="Turn sound off" aria-pressed="true" title="Play the real crew and Mission Control voices (M)"><svg viewBox="0 0 16 16" id="sound-icon"><path d="M2 6h3l4-3v10l-4-3H2z"/><path d="M11 5.2a4 4 0 0 1 0 5.6M12.8 3.4a6.5 6.5 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.4"/></svg><span id="sound-text">Sound on</span></button>
+    <select class="jump" id="jump" aria-label="Jump to event"></select>
+    <button class="btn icon" id="theatre" aria-label="Theatre mode" aria-pressed="false" title="Theatre mode (F)"><svg viewBox="0 0 16 16"><path d="M2 2h5v2H4v3H2zM9 2h5v5h-2V4H9zM2 9h2v3h3v2H2zM12 9h2v5H9v-2h3z"/></svg></button>
+    <button class="btn icon" id="help" aria-label="Keyboard shortcuts" aria-expanded="false" aria-controls="shortcuts" title="Keyboard shortcuts (?)">?</button>
+    <span class="ptime" id="ptime">0:00 / 0:00</span>
+  </div>
+  <div class="scrub">
+    <div class="bands" id="bands"></div>
+    <div class="ticks" id="ticks"></div>
+    <div class="played" id="played"></div>
+    <div class="progress" id="progress"></div>
+    <div class="tip" id="scrub-tip" aria-hidden="true"><b></b><span></span></div>
+    <input type="range" id="scrub" min="0" max="1000" step="0.01" value="0" aria-label="Mission timeline">
+    <div class="focusring"></div>
+  </div>
+</div>
+
+<div class="shortcuts" id="shortcuts" role="dialog" aria-label="Keyboard shortcuts">
+  <h3>Keyboard</h3>
+  <dl>
+    <dt><kbd>Space</kbd></dt><dd>Play / pause</dd>
+    <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Previous / next event</dd>
+    <dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd>Speed 0.5× 1× 2× 4×</dd>
+    <dt><kbd>M</kbd></dt><dd>Sound on / off</dd>
+    <dt><kbd>F</kbd></dt><dd>Theatre mode</dd>
+    <dt><kbd>Esc</kbd></dt><dd>Exit theatre / close</dd>
+    <dt><kbd>?</kbd></dt><dd>This help</dd>
+  </dl>
+</div>
+
+<script id="mission-data" type="application/json">__MISSION_DATA__</script>
+<script>
+/*__JS__*/
+</script>
