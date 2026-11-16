@@ -230,7 +230,7 @@
       FX.glowDot(px, py, 4.2, C.amber);
     }
 
-    var craftName = leg === out ? "Columbia + Eagle" : "Columbia";
+    var craftName = leg === out ? (g < EV["docking-lm"].get ? "Columbia + S-IVB" : "Columbia + Eagle") : "Columbia";
     var ldx = px > W * 0.72 ? -16 : 16;
     var ldy = (leg === ret || py < 90) ? 22 : -14;
     var lAlign = px > W * 0.72 ? "right" : "left";
@@ -240,11 +240,23 @@
     var craftKind = leg === out ? (g < EV["docking-lm"].get ? "csm-sivb" : "csm-lm") : "csm";
     if (isTd && leg === out) {
       var ux = Math.cos(ang), uy = Math.sin(ang);
-      FX.craft("csm-sivb", px - ux * 18, py - uy * 18, ang, 20);
-      FX.craft("csm-lm", px + ux * 10, py + uy * 10, ang, 24);
+      if (g < EV["docking-lm"].get) {
+        var uBefore = Math.max(0, Math.min(1, (EV["docking-lm"].get - g) / 420));
+        var sep = 16 * Math.sin(Math.PI * uBefore); // drifts out, turns, and closes back in to dock
+        FX.craft("csm-sivb", px - ux * 8, py - uy * 8, ang, 20);
+        FX.craft("csm", px + ux * (sep + 8), py + uy * (sep + 8), ang + Math.PI, 22);
+      } else {
+        var uAfter = Math.max(0, Math.min(1, (g - EV["docking-lm"].get) / 420));
+        var s4Dist = 14 + uAfter * 28;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - uAfter);
+        FX.craft("csm-sivb", px - ux * s4Dist, py - uy * s4Dist, ang, 18);
+        ctx.restore();
+        FX.craft("csm-lm", px, py, ang, 26);
+      }
       label("TRANSPOSITION & DOCKING (ILLUSTRATIVE)", px + ldx, py + ldy + (ldy < 0 ? -16 : 16), C.lm, lAlign);
     } else {
-      FX.craft(craftKind, px, py, ang, 26, { engine: burning, throttle: burning ? 1.15 : 0 });
+      FX.craft(craftKind, px, py, ang, 26, { engine: false });
       if (isMcc2) label("MCC-2 SPS BURN (3 s · 6.4 m/s)", px + ldx, py + ldy + (ldy < 0 ? -16 : 16), C.amber, lAlign);
       else if (isMcc5) label("MCC-5 SPS BURN (10 s)", px + ldx, py + ldy + (ldy < 0 ? -16 : 16), C.amber, lAlign);
     }

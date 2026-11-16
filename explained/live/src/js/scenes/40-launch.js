@@ -334,15 +334,14 @@
     s1L_prevG = g;
 
     var px = c.X(s.x), py = c.Y(s.y);
-    var gAhead = Math.min(tr.get[tr.get.length - 1], g + 6);
-    var gBehind = Math.max(0, g - 6);
+    var gMax = tr.get[tr.get.length - 1];
+    var gAhead = Math.min(gMax, Math.max(12, g + 6));
+    var gBehind = Math.max(0, Math.min(gMax - 12, g - 6));
     var sA = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], gAhead);
     var sB = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], gBehind);
     var dScreenX = c.X(sA.x) - c.X(sB.x);
     var dScreenY = c.Y(sA.y) - c.Y(sB.y);
-    var tanAng = (Math.abs(dScreenX) + Math.abs(dScreenY) > 0.5)
-      ? Math.atan2(dScreenY, dScreenX)
-      : Math.atan2(c.Y(tr.y[Math.min(s.i + 1, tr.y.length - 1)]) - py, c.X(tr.x[Math.min(s.i + 1, tr.x.length - 1)]) - px);
+    var tanAng = Math.atan2(dScreenY, dScreenX);
     var padBlend = sstep(0, 12, g);
     var ang = -Math.PI * 0.5 + (tanAng - (-Math.PI * 0.5)) * padBlend;
 

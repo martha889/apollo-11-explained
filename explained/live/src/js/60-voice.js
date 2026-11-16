@@ -7,6 +7,7 @@
   function voiceHolding() { return voice.on && (voice.el !== null || voice.queue.length > 0); }
   function stopVoice() {
     if (voice.el) { try { voice.el.pause(); } catch (e) {} }
+    try { player.currentTime = 0; } catch (e) {}
     if (typeof guard !== "undefined") clearTimeout(guard);
     voice.el = null; voice.line = null; voice.queue = []; voice.manual = false; voiceKey = null;
   }
@@ -24,7 +25,15 @@
     if (unlocked) return;
     unlocked = true;
     if (voice.el) return;
-    try { player.src = SILENT; var pr = player.play(); if (pr && pr.catch) pr.catch(function () { unlocked = false; }); } catch (e) { unlocked = false; }
+    try {
+      player.src = SILENT;
+      var pr = player.play();
+      if (pr && pr.catch) pr.catch(function (err) {
+        if (err && err.name !== "AbortError") unlocked = false;
+      });
+    } catch (e) {
+      unlocked = false;
+    }
   }
   document.addEventListener("pointerdown", unlockAudio, true);
   document.addEventListener("keydown", unlockAudio, true);
@@ -51,7 +60,14 @@
     player.src = l.audio;
     var pr = player.play();
     if (pr && pr.then) {
-      pr.then(function () { voice.blocked = false; voiceKey = null; }, function (err) {
+      pr.then(function () {
+        if (voice.line !== l) {
+          // stopped while starting: silence it, unless another clip now owns the player
+          if (!voice.el) { try { player.pause(); player.currentTime = 0; } catch (e) {} }
+          return;
+        }
+        voice.blocked = false; voiceKey = null;
+      }, function (err) {
         if (voice.line !== l) return;
         clearTimeout(guard);
         voice.el = null; voice.line = null; voiceKey = null;
@@ -84,7 +100,17 @@
     voice.lastG = g;
     if (!voice.on) return;
     if (state.playing && voice.el && voice.el.paused && !voice.blocked) {
-      var pr = voice.el.play(); if (pr && pr.catch) pr.catch(function () {});
+      var pr = voice.el.play();
+      if (pr && pr.catch) {
+        pr.catch(function (err) {
+          if (err && err.name === "NotAllowedError") {
+            voice.blocked = true;
+            unlocked = false;
+            setPlaying(false);
+            voiceKey = null;
+          }
+        });
+      }
     }
     if (state.playing && prev !== null && g > prev) {
       for (var j = bsearch(TRG, prev) + 1; j < TRG.length && TRG[j] <= g; j++) {
@@ -120,7 +146,7 @@
     var i = bsearch(TRG, g), shown = [];
     // up to three recent lines, each kept for 25 s of playback (and at most 15 min of mission time) after it was said
     for (var j = i; j >= 0 && shown.length < 3; j--) { if (p - getToPlay(TRG[j]) <= 25 && g - TRG[j] <= 900) shown.unshift(TR.lines[j]); else break; }
-    var key = shown.map(function (l) { return l.get; }).join(",");
+    var key = (voice.blocked ? "B:" : "") + (voice.line ? voice.line.get : "") + ":" + shown.map(function (l) { return l.get; }).join(",");
     if (key === voiceKey) return;
     voiceKey = key;
     var V = $("voice");
@@ -132,8 +158,9 @@
       var cls = k === shown.length - 1 ? "now" : k === 0 && shown.length === 3 ? "old" : "";
       var role = /CAPCOM|Hornet|Swim/.test(l.who) ? "capcom" : "crew";
       var src = cls === "now" ? ' <a class="src" href="' + TR.sources[l.src] + '" target="_blank" rel="noopener">source</a>' : "";
-      var btn = l.audio ? '<button class="vplay" type="button" data-i="' + TR.lines.indexOf(l) + '" aria-label="Play this recording" title="Play the recording">&#9654;</button>' : "";
-      var sp = voice.line === l ? " speaking" : "";
+      var isSpk = voice.line === l;
+      var btn = l.audio ? '<button class="vplay" type="button" data-i="' + TR.lines.indexOf(l) + '" aria-label="' + (isSpk ? "Stop this recording" : "Play this recording") + '" title="' + (isSpk ? "Stop the recording" : "Play the recording") + '">' + (isSpk ? "&#9632;" : "&#9654;") + '</button>' : "";
+      var sp = isSpk ? " speaking" : "";
       return '<div class="vl ' + cls + sp + '"><span class="vt">' + fmtGET(l.get) + '</span><span class="vw ' + role + '">' + esc(l.who) + '</span><span class="vx">' + btn + esc(l.text) + (l.kind === "onboard" ? '<span class="ob">onboard recorder</span>' : "") + src + "</span></div>";
     }).join("") + (voice.blocked ? '<div class="hint">Your browser held back the sound. Press Play to continue with the real voices.</div>' : "");
   }

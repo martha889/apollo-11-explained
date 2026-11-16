@@ -96,22 +96,35 @@
     // Comet trail for travelled trajectory (with faint full history baseline)
     FX.trail(tr.x, tr.y, M.X, M.Y, 0, s.i, s.f, C.csm, { width: 2.4, tail: 38, baseAlpha: 0.24 });
 
+    var b = burnActive(tr.burns, g);
+    var px = M.X(s.x), py = M.Y(s.y);
+    var ang = s2_eoTangent(tr.x, tr.y, M.X, M.Y, s.i, s.f);
+
     // Highlight the TLI burn arc on the parking circle once TLI starts
     if (g >= meta.tli0 && meta.iEnd > meta.iStart) {
       var iBurnHead = Math.min(s.i, meta.iEnd);
       if (iBurnHead > meta.iStart) {
         polyline(tr.x, tr.y, M.X, M.Y, meta.iStart, iBurnHead, C.amber, 2.8, null, 0.72);
       }
+      if (g < meta.tli1) {
+        var prevX = iBurnHead > meta.iStart ? M.X(tr.x[iBurnHead]) : M.X(tr.x[meta.iStart]);
+        var prevY = iBurnHead > meta.iStart ? M.Y(tr.y[iBurnHead]) : M.Y(tr.y[meta.iStart]);
+        ctx.save();
+        ctx.strokeStyle = C.amber;
+        ctx.lineWidth = 2.8;
+        ctx.globalAlpha = 0.72;
+        ctx.beginPath();
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+        ctx.restore();
+      }
       var tigX = M.X(tr.x[meta.iStart]), tigY = M.Y(tr.y[meta.iStart]);
       FX.glowDot(tigX, tigY, 2.8, C.amber);
-      if (Math.hypot(M.X(s.x) - tigX, M.Y(s.y) - tigY) > 38) {
+      if (Math.hypot(px - tigX, py - tigY) > 38) {
         label("TLI IGNITION", tigX + (tr.x[meta.iStart] >= 0 ? 8 : -8), tigY + 4, C.amber, tr.x[meta.iStart] >= 0 ? "left" : "right");
       }
     }
-
-    var b = burnActive(tr.burns, g);
-    var px = M.X(s.x), py = M.Y(s.y);
-    var ang = s2_eoTangent(tr.x, tr.y, M.X, M.Y, s.i, s.f);
 
     // One-shot event triggers when playhead crosses key moments
     if (s2_eoCrossed(s2_eoPrevG, g, meta.tli0)) {
@@ -149,7 +162,7 @@
     if (inTdBeat && !docked) {
       // Small illustrative separation & turnaround beat before docking
       var uTd = s2_eoSmooth01((g - tdStart) / Math.max(1, EV["docking-lm"].get - tdStart));
-      var sepPx = 11 + 8 * Math.sin(uTd * Math.PI * 0.85);
+      var sepPx = 18 * Math.sin(uTd * Math.PI);
       var ux = Math.cos(ang), uy = Math.sin(ang);
       var s4x = px - ux * sepPx * 0.55, s4y = py - uy * sepPx * 0.55;
       var csmX = px + ux * sepPx * 0.55, csmY = py + uy * sepPx * 0.55;
@@ -158,7 +171,7 @@
       label("T&D TURNAROUND (ILLUSTRATIVE)", px + rdx, py + rdy + (rdy < 0 ? -14 : 14), C.lm, rAlign);
     } else {
       var kind = docked ? "csm-lm" : "csm-sivb";
-      FX.craft(kind, px, py, ang, 1.08, { engine: !!b, throttle: b ? 1.2 : 0 });
+      FX.craft(kind, px, py, ang, 1.08, { engine: false });
       if (b) {
         label("S-IVB TLI BURN", px + rdx, py + rdy + (rdy < 0 ? -14 : 14), C.amber, rAlign);
       }

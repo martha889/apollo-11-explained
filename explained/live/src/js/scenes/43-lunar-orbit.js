@@ -10,8 +10,8 @@
     var n = seg.x.length;
     seg._closedX = seg.x.concat([seg.x[0]]);
     seg._closedY = seg.y.concat([seg.y[0]]);
-    seg._x2 = seg.x.concat(seg.x);
-    seg._y2 = seg.y.concat(seg.y);
+    seg._x2 = seg.x.concat(seg.x).concat([seg.x[0]]);
+    seg._y2 = seg.y.concat(seg.y).concat([seg.y[0]]);
     var rMin = Infinity, rMax = -Infinity, kMin = 0, kMax = 0;
     for (var i = 0; i < n; i++) {
       var r = Math.hypot(seg.x[i], seg.y[i]);
@@ -178,13 +178,13 @@
     ctx.globalAlpha = 0.86;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(ex + 22, ey - uyE * 22);
+    ctx.moveTo(ex - uxE * 22, ey - uyE * 22);
     ctx.lineTo(ex, ey);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(ex - 3, ey + uyE * 3);
-    ctx.lineTo(ex + 6 - nxE * 4, ey - uyE * 6 - nyE * 4);
-    ctx.lineTo(ex + 6 + nxE * 4, ey - uyE * 6 + nyE * 4);
+    ctx.moveTo(ex + uxE * 3, ey + uyE * 3);
+    ctx.lineTo(ex - uxE * 6 - nxE * 4, ey - uyE * 6 - nyE * 4);
+    ctx.lineTo(ex - uxE * 6 + nxE * 4, ey - uyE * 6 + nyE * 4);
     ctx.closePath();
     ctx.fill();
     label("TO EARTH", ex, ey - 10, C.earth, "left");
@@ -240,8 +240,9 @@
     var sx = M.X(site.x), sy = M.Y(site.y);
     var onSurface = ls && ls.kind === "surface";
     if (onSurface) {
-      var pulseR = reduceMotion ? 11 : (7 + ((performance.now() * 0.0012) % 1) * 14);
-      var pulseA = reduceMotion ? 0.45 : (1 - ((performance.now() * 0.0012) % 1)) * 0.65;
+      var pulseK = (performance.now() * 0.0012) % 1;
+      var pulseR = reduceMotion ? 11 : (7 + pulseK * 14);
+      var pulseA = reduceMotion ? 0.45 : (1 - pulseK) * 0.65;
       ctx.save();
       ctx.strokeStyle = C.amber;
       ctx.globalAlpha = pulseA;
@@ -302,7 +303,7 @@
 
       if (ls.kind === "follow") {
         var dtUndock = Math.max(0, g - EV.undocking.get);
-        var sepDist = 15 + 9 * s2_loSmooth01(dtUndock / 900);
+        var sepDist = 24 * s2_loSmooth01(dtUndock / 900);
         var radAng = Math.atan2(py - my, px - mx);
         lx = px - Math.cos(angCsm) * (sepDist * 0.75) + Math.cos(radAng) * (sepDist * 0.55);
         ly = py - Math.sin(angCsm) * (sepDist * 0.75) + Math.sin(radAng) * (sepDist * 0.55);
@@ -317,7 +318,7 @@
 
       if (ls.kind !== "surface") {
         marker(lx, ly, doiBurning ? C.amber : C.lm, "Eagle", { dy: 20, dx: lx < px ? -12 : 12, align: lx < px ? "right" : "left" });
-        FX.craft(lmGlyphKind, lx, ly, lmCraftAng, 1.0, { engine: doiBurning, throttle: doiBurning ? 1.15 : 0 });
+        FX.craft(lmGlyphKind, lx, ly, lmCraftAng, 1.0, { engine: false });
         if (doiBurning) {
           label("DOI RETROGRADE BURN", lx + (lx < px ? -12 : 12), ly + 34, C.amber, lx < px ? "right" : "left");
         } else if (Math.abs(g - EV.undocking.get) < 300) {
@@ -329,7 +330,7 @@
       if (inLos) ctx.globalAlpha = 0.52;
       marker(px, py, csmBurning ? C.amber : C.csm, "Columbia", { dy: -12, dx: 12 });
       ctx.restore();
-      FX.craft("csm", px, py, csmCraftAng, 1.04, { engine: csmBurning, throttle: csmBurning ? 1.2 : 0 });
+      FX.craft("csm", px, py, csmCraftAng, 1.04, { engine: false });
     } else {
       var csmName = docked && lmLabelOK(g) ? "Columbia + Eagle" : "Columbia";
       ctx.save();
@@ -337,7 +338,7 @@
       marker(px, py, csmBurning ? C.amber : C.csm, csmName, { dy: -12, dx: 14 });
       ctx.restore();
       var mainKind = (docked && lmLabelOK(g)) ? "csm-lm" : "csm";
-      FX.craft(mainKind, px, py, csmCraftAng, 1.08, { engine: csmBurning, throttle: csmBurning ? 1.25 : 0 });
+      FX.craft(mainKind, px, py, csmCraftAng, 1.08, { engine: false });
     }
 
     if (csmBurning) {
@@ -349,7 +350,7 @@
     if (EV["lm-jettison"] && g >= EV["lm-jettison"].get && g < EV["lm-jettison"].get + 3600) {
       var dtJett = g - EV["lm-jettison"].get;
       var jettAlpha = Math.max(0.14, 1 - dtJett / 3600);
-      var jettSep = 20 + Math.min(54, dtJett * 0.032);
+      var jettSep = (20 + Math.min(54, dtJett * 0.032)) * s2_loSmooth01(dtJett / 60);
       var rAngJ = Math.atan2(py - my, px - mx);
       var jx = px - Math.cos(angCsm) * (jettSep * 0.85) + Math.cos(rAngJ) * (jettSep * 0.55);
       var jy = py - Math.sin(angCsm) * (jettSep * 0.85) + Math.sin(rAngJ) * (jettSep * 0.55);

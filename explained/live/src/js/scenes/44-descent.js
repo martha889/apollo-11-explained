@@ -172,7 +172,7 @@
     var v = smooth(tgt, "descent", dt);
     var c = chart(v, tr.x_label, tr.y_label);
 
-    var landed = g >= EV.touchdown.get;
+    var landed = g >= EV.touchdown.get || s.y <= 0;
     var ph = tr.phase[Math.min(s.i + (s.f > 0.5 ? 1 : 0), tr.phase.length - 1)];
     var marks = tr.marks || {};
     var lrGet = marks.radar_lock_get;

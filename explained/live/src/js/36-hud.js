@@ -216,9 +216,9 @@
 
     function drawStripCard(item, x, y, sw, sh, g, baseColor) {
       var s = sampleTrack(item.get, [["v", item.v]], g);
-      var val = s.v;
-      var uNow = Math.max(0, Math.min(1, (g - item.g0) / item.gSpan));
-      var nNow = Math.max(0, Math.min(1, (val - item.vMin) / item.vSpan));
+      var val = isFinite(s.v) ? s.v : 0;
+      var uNow = item.gSpan > 0 ? Math.max(0, Math.min(1, (g - item.g0) / item.gSpan)) : 0;
+      var nNow = item.vSpan > 0 ? Math.max(0, Math.min(1, (val - item.vMin) / item.vSpan)) : 0;
 
       var isAlarm = item.alarmAbove !== null && val > item.alarmAbove;
       var strokeCol = isAlarm ? C.alarm : baseColor;

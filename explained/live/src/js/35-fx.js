@@ -64,6 +64,7 @@
         view = null;
         viewMoving = false;
       }
+      lastMarkValid = false;
     }
 
     function tick(dt, playing) {
@@ -156,13 +157,13 @@
       ctx.globalCompositeOperation = "lighter";
       for (var i = 0; i < MAX_P; i++) {
         if (!pActive[i] || pKind[i] !== 0) continue;
-        var u = pAge[i] / pLife[i];
-        var r = pR0[i] + (pR1[i] - pR0[i]) * u;
+        var u = Math.max(0, Math.min(1, pAge[i] / pLife[i]));
+        var r = Math.max(0.1, pR0[i] + (pR1[i] - pR0[i]) * u);
         var alpha = (1 - u) * (1 - u) * 0.72;
         if (u < 0.24) ctx.fillStyle = "#fff9e6";
         else if (u < 0.62) ctx.fillStyle = "#ffb840";
         else ctx.fillStyle = "#e05219";
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
         ctx.beginPath();
         ctx.arc(px[i], py[i], r, 0, Math.PI * 2);
         ctx.fill();
@@ -177,9 +178,9 @@
       ctx.fillStyle = C.moon || "#b9bcc4";
       for (var i = 0; i < MAX_P; i++) {
         if (!pActive[i] || pKind[i] !== 1) continue;
-        var u = pAge[i] / pLife[i];
-        var r = pR0[i] + (pR1[i] - pR0[i]) * u;
-        ctx.globalAlpha = (1 - u) * 0.42;
+        var u = Math.max(0, Math.min(1, pAge[i] / pLife[i]));
+        var r = Math.max(0.1, pR0[i] + (pR1[i] - pR0[i]) * u);
+        ctx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 0.42));
         ctx.beginPath();
         ctx.arc(px[i], py[i], r, 0, Math.PI * 2);
         ctx.fill();
@@ -239,7 +240,7 @@
         if (isLast && f > 0) ctx.lineTo(hx, hy);
 
         var segW = w * (0.42 + 0.72 * frac);
-        var segA = (opts.alpha || 1) * (0.14 + 0.86 * frac * frac);
+        var segA = (opts.alpha == null ? 1 : opts.alpha) * (0.14 + 0.86 * frac * frac);
         if (frac > 0.6 && opts.glow !== false) {
           ctx.lineWidth = segW * 3.1;
           ctx.globalAlpha = segA * 0.20;
@@ -258,7 +259,7 @@
       ctx.lineTo(hx, hy);
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = Math.max(0.9, w * 0.45);
-      ctx.globalAlpha = (opts.alpha || 1) * 0.55;
+      ctx.globalAlpha = (opts.alpha == null ? 1 : opts.alpha) * 0.55;
       ctx.stroke();
       ctx.restore();
     }
@@ -690,7 +691,7 @@
     }
 
     function glowDot(x, y, r, color) {
-      var rad = r || 3.5;
+      var rad = Math.max(0.1, r || 3.5);
       var col = color || C.amber;
       var g = ctx.createRadialGradient(x, y, rad * 0.2, x, y, rad * 3.2);
       g.addColorStop(0, col);
@@ -720,17 +721,17 @@
         for (var i = 0; i < MAX_PINGS; i++) {
           var pg = pings[i];
           if (!pg.active) continue;
-          var u = pg.age / pg.life;
+          var u = Math.max(0, Math.min(1, pg.age / Math.max(1e-4, pg.life)));
           var ease = 1 - Math.pow(1 - u, 3);
-          var r1 = 5 + ease * 44;
+          var r1 = Math.max(0, 5 + ease * 44);
           ctx.strokeStyle = pg.color;
-          ctx.globalAlpha = (1 - u) * 0.82;
+          ctx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 0.82));
           ctx.lineWidth = 2.2 * (1 - u * 0.6);
           ctx.beginPath(); ctx.arc(pg.x, pg.y, r1, 0, Math.PI * 2); ctx.stroke();
           if (u > 0.14) {
-            var u2 = (u - 0.14) / 0.86;
-            var r2 = 4 + (1 - Math.pow(1 - u2, 2)) * 30;
-            ctx.globalAlpha = (1 - u2) * 0.48;
+            var u2 = Math.max(0, Math.min(1, (u - 0.14) / 0.86));
+            var r2 = Math.max(0, 4 + (1 - Math.pow(1 - u2, 2)) * 30);
+            ctx.globalAlpha = Math.max(0, Math.min(1, (1 - u2) * 0.48));
             ctx.lineWidth = 1.3;
             ctx.beginPath(); ctx.arc(pg.x, pg.y, r2, 0, Math.PI * 2); ctx.stroke();
           }

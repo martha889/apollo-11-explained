@@ -188,7 +188,7 @@
     return c;
   }
 
-  function s3_drawSurfaceAstronaut(x, y, s, k, bob, isOnLadder) {
+  function s3_drawSurfaceAstronaut(x, y, s, k, bob, isOnLadder, flagPlanted) {
     ctx.save();
     ctx.translate(x, y - bob);
     ctx.scale(s, s);
@@ -247,7 +247,7 @@
       ctx.lineTo(-7.2, -24.0);
       ctx.moveTo(3.5, -20.5);
       ctx.lineTo(-2.5, -23.0);
-    } else if (k === 0) {
+    } else if (k === 0 || !flagPlanted) {
       ctx.moveTo(-3.8, -20.5);
       ctx.lineTo(-6.2, -13.5);
       ctx.moveTo(3.8, -20.5);
@@ -541,7 +541,7 @@
     var preLaunchRem = EV.liftoff.get - g;
     var climbPx = 0;
     if (up) {
-      climbPx = Math.min(H * 0.45, 18 * s + (g - EV.liftoff.get) * 14 * s);
+      climbPx = Math.min(H * 0.45, (g - EV.liftoff.get) * 14 * s);
       FX.exhaust(lx, gy - 44 * s - climbPx, -Math.PI * 0.5, 1.0, { scale: s * 1.15, color: C.amber });
       FX.dust(lx, gy, 1.35);
     }
@@ -713,9 +713,9 @@
         s3_drawPillTag("HATCH OPEN · ON PORCH / LADDER", lx, gy - 98 * s, C.amber, "center", 0.82);
       } else {
         // Armstrong on the surface; Aldrin joins ~20 min later (first-step + 1200)
-        s3_drawSurfaceAstronaut(lx + 70 * s, gy, s, 0, bob0, false);
+        s3_drawSurfaceAstronaut(lx + 70 * s, gy, s, 0, bob0, false, g >= 395520);
         if (g >= EV["first-step"].get + 1200) {
-          s3_drawSurfaceAstronaut(lx + 120 * s, gy, s, 1, bob1, false);
+          s3_drawSurfaceAstronaut(lx + 120 * s, gy, s, 1, bob1, false, g >= 395520);
         }
       }
     }

@@ -2117,6 +2117,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
         view = null;
         viewMoving = false;
       }
+      lastMarkValid = false;
     }
 
     function tick(dt, playing) {
@@ -2209,13 +2210,13 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       ctx.globalCompositeOperation = "lighter";
       for (var i = 0; i < MAX_P; i++) {
         if (!pActive[i] || pKind[i] !== 0) continue;
-        var u = pAge[i] / pLife[i];
-        var r = pR0[i] + (pR1[i] - pR0[i]) * u;
+        var u = Math.max(0, Math.min(1, pAge[i] / pLife[i]));
+        var r = Math.max(0.1, pR0[i] + (pR1[i] - pR0[i]) * u);
         var alpha = (1 - u) * (1 - u) * 0.72;
         if (u < 0.24) ctx.fillStyle = "#fff9e6";
         else if (u < 0.62) ctx.fillStyle = "#ffb840";
         else ctx.fillStyle = "#e05219";
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
         ctx.beginPath();
         ctx.arc(px[i], py[i], r, 0, Math.PI * 2);
         ctx.fill();
@@ -2230,9 +2231,9 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       ctx.fillStyle = C.moon || "#b9bcc4";
       for (var i = 0; i < MAX_P; i++) {
         if (!pActive[i] || pKind[i] !== 1) continue;
-        var u = pAge[i] / pLife[i];
-        var r = pR0[i] + (pR1[i] - pR0[i]) * u;
-        ctx.globalAlpha = (1 - u) * 0.42;
+        var u = Math.max(0, Math.min(1, pAge[i] / pLife[i]));
+        var r = Math.max(0.1, pR0[i] + (pR1[i] - pR0[i]) * u);
+        ctx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 0.42));
         ctx.beginPath();
         ctx.arc(px[i], py[i], r, 0, Math.PI * 2);
         ctx.fill();
@@ -2292,7 +2293,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
         if (isLast && f > 0) ctx.lineTo(hx, hy);
 
         var segW = w * (0.42 + 0.72 * frac);
-        var segA = (opts.alpha || 1) * (0.14 + 0.86 * frac * frac);
+        var segA = (opts.alpha == null ? 1 : opts.alpha) * (0.14 + 0.86 * frac * frac);
         if (frac > 0.6 && opts.glow !== false) {
           ctx.lineWidth = segW * 3.1;
           ctx.globalAlpha = segA * 0.20;
@@ -2311,7 +2312,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       ctx.lineTo(hx, hy);
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = Math.max(0.9, w * 0.45);
-      ctx.globalAlpha = (opts.alpha || 1) * 0.55;
+      ctx.globalAlpha = (opts.alpha == null ? 1 : opts.alpha) * 0.55;
       ctx.stroke();
       ctx.restore();
     }
@@ -2743,7 +2744,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     }
 
     function glowDot(x, y, r, color) {
-      var rad = r || 3.5;
+      var rad = Math.max(0.1, r || 3.5);
       var col = color || C.amber;
       var g = ctx.createRadialGradient(x, y, rad * 0.2, x, y, rad * 3.2);
       g.addColorStop(0, col);
@@ -2773,17 +2774,17 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
         for (var i = 0; i < MAX_PINGS; i++) {
           var pg = pings[i];
           if (!pg.active) continue;
-          var u = pg.age / pg.life;
+          var u = Math.max(0, Math.min(1, pg.age / Math.max(1e-4, pg.life)));
           var ease = 1 - Math.pow(1 - u, 3);
-          var r1 = 5 + ease * 44;
+          var r1 = Math.max(0, 5 + ease * 44);
           ctx.strokeStyle = pg.color;
-          ctx.globalAlpha = (1 - u) * 0.82;
+          ctx.globalAlpha = Math.max(0, Math.min(1, (1 - u) * 0.82));
           ctx.lineWidth = 2.2 * (1 - u * 0.6);
           ctx.beginPath(); ctx.arc(pg.x, pg.y, r1, 0, Math.PI * 2); ctx.stroke();
           if (u > 0.14) {
-            var u2 = (u - 0.14) / 0.86;
-            var r2 = 4 + (1 - Math.pow(1 - u2, 2)) * 30;
-            ctx.globalAlpha = (1 - u2) * 0.48;
+            var u2 = Math.max(0, Math.min(1, (u - 0.14) / 0.86));
+            var r2 = Math.max(0, 4 + (1 - Math.pow(1 - u2, 2)) * 30);
+            ctx.globalAlpha = Math.max(0, Math.min(1, (1 - u2) * 0.48));
             ctx.lineWidth = 1.3;
             ctx.beginPath(); ctx.arc(pg.x, pg.y, r2, 0, Math.PI * 2); ctx.stroke();
           }
@@ -3122,9 +3123,9 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
 
     function drawStripCard(item, x, y, sw, sh, g, baseColor) {
       var s = sampleTrack(item.get, [["v", item.v]], g);
-      var val = s.v;
-      var uNow = Math.max(0, Math.min(1, (g - item.g0) / item.gSpan));
-      var nNow = Math.max(0, Math.min(1, (val - item.vMin) / item.vSpan));
+      var val = isFinite(s.v) ? s.v : 0;
+      var uNow = item.gSpan > 0 ? Math.max(0, Math.min(1, (g - item.g0) / item.gSpan)) : 0;
+      var nNow = item.vSpan > 0 ? Math.max(0, Math.min(1, (val - item.vMin) / item.vSpan)) : 0;
 
       var isAlarm = item.alarmAbove !== null && val > item.alarmAbove;
       var strokeCol = isAlarm ? C.alarm : baseColor;
@@ -3647,15 +3648,14 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     s1L_prevG = g;
 
     var px = c.X(s.x), py = c.Y(s.y);
-    var gAhead = Math.min(tr.get[tr.get.length - 1], g + 6);
-    var gBehind = Math.max(0, g - 6);
+    var gMax = tr.get[tr.get.length - 1];
+    var gAhead = Math.min(gMax, Math.max(12, g + 6));
+    var gBehind = Math.max(0, Math.min(gMax - 12, g - 6));
     var sA = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], gAhead);
     var sB = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], gBehind);
     var dScreenX = c.X(sA.x) - c.X(sB.x);
     var dScreenY = c.Y(sA.y) - c.Y(sB.y);
-    var tanAng = (Math.abs(dScreenX) + Math.abs(dScreenY) > 0.5)
-      ? Math.atan2(dScreenY, dScreenX)
-      : Math.atan2(c.Y(tr.y[Math.min(s.i + 1, tr.y.length - 1)]) - py, c.X(tr.x[Math.min(s.i + 1, tr.x.length - 1)]) - px);
+    var tanAng = Math.atan2(dScreenY, dScreenX);
     var padBlend = sstep(0, 12, g);
     var ang = -Math.PI * 0.5 + (tanAng - (-Math.PI * 0.5)) * padBlend;
 
@@ -3795,22 +3795,35 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     // Comet trail for travelled trajectory (with faint full history baseline)
     FX.trail(tr.x, tr.y, M.X, M.Y, 0, s.i, s.f, C.csm, { width: 2.4, tail: 38, baseAlpha: 0.24 });
 
+    var b = burnActive(tr.burns, g);
+    var px = M.X(s.x), py = M.Y(s.y);
+    var ang = s2_eoTangent(tr.x, tr.y, M.X, M.Y, s.i, s.f);
+
     // Highlight the TLI burn arc on the parking circle once TLI starts
     if (g >= meta.tli0 && meta.iEnd > meta.iStart) {
       var iBurnHead = Math.min(s.i, meta.iEnd);
       if (iBurnHead > meta.iStart) {
         polyline(tr.x, tr.y, M.X, M.Y, meta.iStart, iBurnHead, C.amber, 2.8, null, 0.72);
       }
+      if (g < meta.tli1) {
+        var prevX = iBurnHead > meta.iStart ? M.X(tr.x[iBurnHead]) : M.X(tr.x[meta.iStart]);
+        var prevY = iBurnHead > meta.iStart ? M.Y(tr.y[iBurnHead]) : M.Y(tr.y[meta.iStart]);
+        ctx.save();
+        ctx.strokeStyle = C.amber;
+        ctx.lineWidth = 2.8;
+        ctx.globalAlpha = 0.72;
+        ctx.beginPath();
+        ctx.moveTo(prevX, prevY);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+        ctx.restore();
+      }
       var tigX = M.X(tr.x[meta.iStart]), tigY = M.Y(tr.y[meta.iStart]);
       FX.glowDot(tigX, tigY, 2.8, C.amber);
-      if (Math.hypot(M.X(s.x) - tigX, M.Y(s.y) - tigY) > 38) {
+      if (Math.hypot(px - tigX, py - tigY) > 38) {
         label("TLI IGNITION", tigX + (tr.x[meta.iStart] >= 0 ? 8 : -8), tigY + 4, C.amber, tr.x[meta.iStart] >= 0 ? "left" : "right");
       }
     }
-
-    var b = burnActive(tr.burns, g);
-    var px = M.X(s.x), py = M.Y(s.y);
-    var ang = s2_eoTangent(tr.x, tr.y, M.X, M.Y, s.i, s.f);
 
     // One-shot event triggers when playhead crosses key moments
     if (s2_eoCrossed(s2_eoPrevG, g, meta.tli0)) {
@@ -3848,7 +3861,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     if (inTdBeat && !docked) {
       // Small illustrative separation & turnaround beat before docking
       var uTd = s2_eoSmooth01((g - tdStart) / Math.max(1, EV["docking-lm"].get - tdStart));
-      var sepPx = 11 + 8 * Math.sin(uTd * Math.PI * 0.85);
+      var sepPx = 18 * Math.sin(uTd * Math.PI);
       var ux = Math.cos(ang), uy = Math.sin(ang);
       var s4x = px - ux * sepPx * 0.55, s4y = py - uy * sepPx * 0.55;
       var csmX = px + ux * sepPx * 0.55, csmY = py + uy * sepPx * 0.55;
@@ -3857,7 +3870,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       label("T&D TURNAROUND (ILLUSTRATIVE)", px + rdx, py + rdy + (rdy < 0 ? -14 : 14), C.lm, rAlign);
     } else {
       var kind = docked ? "csm-lm" : "csm-sivb";
-      FX.craft(kind, px, py, ang, 1.08, { engine: !!b, throttle: b ? 1.2 : 0 });
+      FX.craft(kind, px, py, ang, 1.08, { engine: false });
       if (b) {
         label("S-IVB TLI BURN", px + rdx, py + rdy + (rdy < 0 ? -14 : 14), C.amber, rAlign);
       }
@@ -4107,7 +4120,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       FX.glowDot(px, py, 4.2, C.amber);
     }
 
-    var craftName = leg === out ? "Columbia + Eagle" : "Columbia";
+    var craftName = leg === out ? (g < EV["docking-lm"].get ? "Columbia + S-IVB" : "Columbia + Eagle") : "Columbia";
     var ldx = px > W * 0.72 ? -16 : 16;
     var ldy = (leg === ret || py < 90) ? 22 : -14;
     var lAlign = px > W * 0.72 ? "right" : "left";
@@ -4117,11 +4130,23 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     var craftKind = leg === out ? (g < EV["docking-lm"].get ? "csm-sivb" : "csm-lm") : "csm";
     if (isTd && leg === out) {
       var ux = Math.cos(ang), uy = Math.sin(ang);
-      FX.craft("csm-sivb", px - ux * 18, py - uy * 18, ang, 20);
-      FX.craft("csm-lm", px + ux * 10, py + uy * 10, ang, 24);
+      if (g < EV["docking-lm"].get) {
+        var uBefore = Math.max(0, Math.min(1, (EV["docking-lm"].get - g) / 420));
+        var sep = 16 * Math.sin(Math.PI * uBefore); // drifts out, turns, and closes back in to dock
+        FX.craft("csm-sivb", px - ux * 8, py - uy * 8, ang, 20);
+        FX.craft("csm", px + ux * (sep + 8), py + uy * (sep + 8), ang + Math.PI, 22);
+      } else {
+        var uAfter = Math.max(0, Math.min(1, (g - EV["docking-lm"].get) / 420));
+        var s4Dist = 14 + uAfter * 28;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, 1 - uAfter);
+        FX.craft("csm-sivb", px - ux * s4Dist, py - uy * s4Dist, ang, 18);
+        ctx.restore();
+        FX.craft("csm-lm", px, py, ang, 26);
+      }
       label("TRANSPOSITION & DOCKING (ILLUSTRATIVE)", px + ldx, py + ldy + (ldy < 0 ? -16 : 16), C.lm, lAlign);
     } else {
-      FX.craft(craftKind, px, py, ang, 26, { engine: burning, throttle: burning ? 1.15 : 0 });
+      FX.craft(craftKind, px, py, ang, 26, { engine: false });
       if (isMcc2) label("MCC-2 SPS BURN (3 s · 6.4 m/s)", px + ldx, py + ldy + (ldy < 0 ? -16 : 16), C.amber, lAlign);
       else if (isMcc5) label("MCC-5 SPS BURN (10 s)", px + ldx, py + ldy + (ldy < 0 ? -16 : 16), C.amber, lAlign);
     }
@@ -4152,8 +4177,8 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     var n = seg.x.length;
     seg._closedX = seg.x.concat([seg.x[0]]);
     seg._closedY = seg.y.concat([seg.y[0]]);
-    seg._x2 = seg.x.concat(seg.x);
-    seg._y2 = seg.y.concat(seg.y);
+    seg._x2 = seg.x.concat(seg.x).concat([seg.x[0]]);
+    seg._y2 = seg.y.concat(seg.y).concat([seg.y[0]]);
     var rMin = Infinity, rMax = -Infinity, kMin = 0, kMax = 0;
     for (var i = 0; i < n; i++) {
       var r = Math.hypot(seg.x[i], seg.y[i]);
@@ -4320,13 +4345,13 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     ctx.globalAlpha = 0.86;
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.moveTo(ex + 22, ey - uyE * 22);
+    ctx.moveTo(ex - uxE * 22, ey - uyE * 22);
     ctx.lineTo(ex, ey);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(ex - 3, ey + uyE * 3);
-    ctx.lineTo(ex + 6 - nxE * 4, ey - uyE * 6 - nyE * 4);
-    ctx.lineTo(ex + 6 + nxE * 4, ey - uyE * 6 + nyE * 4);
+    ctx.moveTo(ex + uxE * 3, ey + uyE * 3);
+    ctx.lineTo(ex - uxE * 6 - nxE * 4, ey - uyE * 6 - nyE * 4);
+    ctx.lineTo(ex - uxE * 6 + nxE * 4, ey - uyE * 6 + nyE * 4);
     ctx.closePath();
     ctx.fill();
     label("TO EARTH", ex, ey - 10, C.earth, "left");
@@ -4382,8 +4407,9 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     var sx = M.X(site.x), sy = M.Y(site.y);
     var onSurface = ls && ls.kind === "surface";
     if (onSurface) {
-      var pulseR = reduceMotion ? 11 : (7 + ((performance.now() * 0.0012) % 1) * 14);
-      var pulseA = reduceMotion ? 0.45 : (1 - ((performance.now() * 0.0012) % 1)) * 0.65;
+      var pulseK = (performance.now() * 0.0012) % 1;
+      var pulseR = reduceMotion ? 11 : (7 + pulseK * 14);
+      var pulseA = reduceMotion ? 0.45 : (1 - pulseK) * 0.65;
       ctx.save();
       ctx.strokeStyle = C.amber;
       ctx.globalAlpha = pulseA;
@@ -4444,7 +4470,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
 
       if (ls.kind === "follow") {
         var dtUndock = Math.max(0, g - EV.undocking.get);
-        var sepDist = 15 + 9 * s2_loSmooth01(dtUndock / 900);
+        var sepDist = 24 * s2_loSmooth01(dtUndock / 900);
         var radAng = Math.atan2(py - my, px - mx);
         lx = px - Math.cos(angCsm) * (sepDist * 0.75) + Math.cos(radAng) * (sepDist * 0.55);
         ly = py - Math.sin(angCsm) * (sepDist * 0.75) + Math.sin(radAng) * (sepDist * 0.55);
@@ -4459,7 +4485,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
 
       if (ls.kind !== "surface") {
         marker(lx, ly, doiBurning ? C.amber : C.lm, "Eagle", { dy: 20, dx: lx < px ? -12 : 12, align: lx < px ? "right" : "left" });
-        FX.craft(lmGlyphKind, lx, ly, lmCraftAng, 1.0, { engine: doiBurning, throttle: doiBurning ? 1.15 : 0 });
+        FX.craft(lmGlyphKind, lx, ly, lmCraftAng, 1.0, { engine: false });
         if (doiBurning) {
           label("DOI RETROGRADE BURN", lx + (lx < px ? -12 : 12), ly + 34, C.amber, lx < px ? "right" : "left");
         } else if (Math.abs(g - EV.undocking.get) < 300) {
@@ -4471,7 +4497,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       if (inLos) ctx.globalAlpha = 0.52;
       marker(px, py, csmBurning ? C.amber : C.csm, "Columbia", { dy: -12, dx: 12 });
       ctx.restore();
-      FX.craft("csm", px, py, csmCraftAng, 1.04, { engine: csmBurning, throttle: csmBurning ? 1.2 : 0 });
+      FX.craft("csm", px, py, csmCraftAng, 1.04, { engine: false });
     } else {
       var csmName = docked && lmLabelOK(g) ? "Columbia + Eagle" : "Columbia";
       ctx.save();
@@ -4479,7 +4505,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       marker(px, py, csmBurning ? C.amber : C.csm, csmName, { dy: -12, dx: 14 });
       ctx.restore();
       var mainKind = (docked && lmLabelOK(g)) ? "csm-lm" : "csm";
-      FX.craft(mainKind, px, py, csmCraftAng, 1.08, { engine: csmBurning, throttle: csmBurning ? 1.25 : 0 });
+      FX.craft(mainKind, px, py, csmCraftAng, 1.08, { engine: false });
     }
 
     if (csmBurning) {
@@ -4491,7 +4517,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     if (EV["lm-jettison"] && g >= EV["lm-jettison"].get && g < EV["lm-jettison"].get + 3600) {
       var dtJett = g - EV["lm-jettison"].get;
       var jettAlpha = Math.max(0.14, 1 - dtJett / 3600);
-      var jettSep = 20 + Math.min(54, dtJett * 0.032);
+      var jettSep = (20 + Math.min(54, dtJett * 0.032)) * s2_loSmooth01(dtJett / 60);
       var rAngJ = Math.atan2(py - my, px - mx);
       var jx = px - Math.cos(angCsm) * (jettSep * 0.85) + Math.cos(rAngJ) * (jettSep * 0.55);
       var jy = py - Math.sin(angCsm) * (jettSep * 0.85) + Math.sin(rAngJ) * (jettSep * 0.55);
@@ -4714,7 +4740,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     var v = smooth(tgt, "descent", dt);
     var c = chart(v, tr.x_label, tr.y_label);
 
-    var landed = g >= EV.touchdown.get;
+    var landed = g >= EV.touchdown.get || s.y <= 0;
     var ph = tr.phase[Math.min(s.i + (s.f > 0.5 ? 1 : 0), tr.phase.length - 1)];
     var marks = tr.marks || {};
     var lrGet = marks.radar_lock_get;
@@ -5316,7 +5342,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     return c;
   }
 
-  function s3_drawSurfaceAstronaut(x, y, s, k, bob, isOnLadder) {
+  function s3_drawSurfaceAstronaut(x, y, s, k, bob, isOnLadder, flagPlanted) {
     ctx.save();
     ctx.translate(x, y - bob);
     ctx.scale(s, s);
@@ -5375,7 +5401,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       ctx.lineTo(-7.2, -24.0);
       ctx.moveTo(3.5, -20.5);
       ctx.lineTo(-2.5, -23.0);
-    } else if (k === 0) {
+    } else if (k === 0 || !flagPlanted) {
       ctx.moveTo(-3.8, -20.5);
       ctx.lineTo(-6.2, -13.5);
       ctx.moveTo(3.8, -20.5);
@@ -5669,7 +5695,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     var preLaunchRem = EV.liftoff.get - g;
     var climbPx = 0;
     if (up) {
-      climbPx = Math.min(H * 0.45, 18 * s + (g - EV.liftoff.get) * 14 * s);
+      climbPx = Math.min(H * 0.45, (g - EV.liftoff.get) * 14 * s);
       FX.exhaust(lx, gy - 44 * s - climbPx, -Math.PI * 0.5, 1.0, { scale: s * 1.15, color: C.amber });
       FX.dust(lx, gy, 1.35);
     }
@@ -5841,9 +5867,9 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
         s3_drawPillTag("HATCH OPEN · ON PORCH / LADDER", lx, gy - 98 * s, C.amber, "center", 0.82);
       } else {
         // Armstrong on the surface; Aldrin joins ~20 min later (first-step + 1200)
-        s3_drawSurfaceAstronaut(lx + 70 * s, gy, s, 0, bob0, false);
+        s3_drawSurfaceAstronaut(lx + 70 * s, gy, s, 0, bob0, false, g >= 395520);
         if (g >= EV["first-step"].get + 1200) {
-          s3_drawSurfaceAstronaut(lx + 120 * s, gy, s, 1, bob1, false);
+          s3_drawSurfaceAstronaut(lx + 120 * s, gy, s, 1, bob1, false, g >= 395520);
         }
       }
     }
@@ -7276,8 +7302,13 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       FX.glowDot(eiX, eiY, 3.2, C.amber);
       label("EI GATE", eiX + 8, eiY - 6, C.amber, "left");
 
+      var sEI0 = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], EV["entry-interface"].get);
+      var sEI1 = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], EV["entry-interface"].get + 6);
+      var toEiAng = Math.atan2(c.Y(sEI1.y) - c.Y(sEI0.y), c.X(sEI1.x) - c.X(sEI0.x));
+      var eiSlope = (sEI1.y - sEI0.y) / (sEI1.x - sEI0.x);
+
       var cmWorldX = -240 * (1 - uPre);
-      var cmWorldY = 121.92 + 12 * (1 - uPre);
+      var cmWorldY = tr.y[0] + cmWorldX * eiSlope;
       var cmX = c.X(cmWorldX), cmY = c.Y(cmWorldY);
 
       ctx.save();
@@ -7285,7 +7316,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       ctx.globalAlpha = 0.45;
       ctx.setLineDash([3, 4]);
       ctx.beginPath();
-      ctx.moveTo(c.X(-320), c.Y(138));
+      ctx.moveTo(c.X(-280), c.Y(tr.y[0] - 280 * eiSlope));
       ctx.lineTo(eiX, eiY);
       ctx.stroke();
       ctx.restore();
@@ -7307,9 +7338,8 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       ctx.restore();
       text("SM JETTISONED (ILLUSTRATIVE)", smX + 10, smY + 4, { size: 9.5, weight: 600, color: C.muted, font: "Barlow Condensed, Arial Narrow, sans-serif" });
 
-      var toEiAng = Math.atan2(eiY - c.Y(138), eiX - c.X(-320));
       marker(cmX, cmY, C.csm, "Columbia (CM)", { dx: 14, dy: 4, align: "left" });
-      FX.craft("cm", cmX, cmY, toEiAng + Math.PI, 1.15);
+      FX.craft("cm", cmX, cmY, toEiAng + Math.PI, 1.18);
     } else {
       var px = c.X(s.x), py = c.Y(s.y);
       var gAhead = Math.min(tr.get[tr.get.length - 1], g + 6);
@@ -7388,6 +7418,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
   function voiceHolding() { return voice.on && (voice.el !== null || voice.queue.length > 0); }
   function stopVoice() {
     if (voice.el) { try { voice.el.pause(); } catch (e) {} }
+    try { player.currentTime = 0; } catch (e) {}
     if (typeof guard !== "undefined") clearTimeout(guard);
     voice.el = null; voice.line = null; voice.queue = []; voice.manual = false; voiceKey = null;
   }
@@ -7405,7 +7436,15 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     if (unlocked) return;
     unlocked = true;
     if (voice.el) return;
-    try { player.src = SILENT; var pr = player.play(); if (pr && pr.catch) pr.catch(function () { unlocked = false; }); } catch (e) { unlocked = false; }
+    try {
+      player.src = SILENT;
+      var pr = player.play();
+      if (pr && pr.catch) pr.catch(function (err) {
+        if (err && err.name !== "AbortError") unlocked = false;
+      });
+    } catch (e) {
+      unlocked = false;
+    }
   }
   document.addEventListener("pointerdown", unlockAudio, true);
   document.addEventListener("keydown", unlockAudio, true);
@@ -7432,7 +7471,14 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     player.src = l.audio;
     var pr = player.play();
     if (pr && pr.then) {
-      pr.then(function () { voice.blocked = false; voiceKey = null; }, function (err) {
+      pr.then(function () {
+        if (voice.line !== l) {
+          // stopped while starting: silence it, unless another clip now owns the player
+          if (!voice.el) { try { player.pause(); player.currentTime = 0; } catch (e) {} }
+          return;
+        }
+        voice.blocked = false; voiceKey = null;
+      }, function (err) {
         if (voice.line !== l) return;
         clearTimeout(guard);
         voice.el = null; voice.line = null; voiceKey = null;
@@ -7465,7 +7511,17 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     voice.lastG = g;
     if (!voice.on) return;
     if (state.playing && voice.el && voice.el.paused && !voice.blocked) {
-      var pr = voice.el.play(); if (pr && pr.catch) pr.catch(function () {});
+      var pr = voice.el.play();
+      if (pr && pr.catch) {
+        pr.catch(function (err) {
+          if (err && err.name === "NotAllowedError") {
+            voice.blocked = true;
+            unlocked = false;
+            setPlaying(false);
+            voiceKey = null;
+          }
+        });
+      }
     }
     if (state.playing && prev !== null && g > prev) {
       for (var j = bsearch(TRG, prev) + 1; j < TRG.length && TRG[j] <= g; j++) {
@@ -7501,7 +7557,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
     var i = bsearch(TRG, g), shown = [];
     // up to three recent lines, each kept for 25 s of playback (and at most 15 min of mission time) after it was said
     for (var j = i; j >= 0 && shown.length < 3; j--) { if (p - getToPlay(TRG[j]) <= 25 && g - TRG[j] <= 900) shown.unshift(TR.lines[j]); else break; }
-    var key = shown.map(function (l) { return l.get; }).join(",");
+    var key = (voice.blocked ? "B:" : "") + (voice.line ? voice.line.get : "") + ":" + shown.map(function (l) { return l.get; }).join(",");
     if (key === voiceKey) return;
     voiceKey = key;
     var V = $("voice");
@@ -7513,8 +7569,9 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
       var cls = k === shown.length - 1 ? "now" : k === 0 && shown.length === 3 ? "old" : "";
       var role = /CAPCOM|Hornet|Swim/.test(l.who) ? "capcom" : "crew";
       var src = cls === "now" ? ' <a class="src" href="' + TR.sources[l.src] + '" target="_blank" rel="noopener">source</a>' : "";
-      var btn = l.audio ? '<button class="vplay" type="button" data-i="' + TR.lines.indexOf(l) + '" aria-label="Play this recording" title="Play the recording">&#9654;</button>' : "";
-      var sp = voice.line === l ? " speaking" : "";
+      var isSpk = voice.line === l;
+      var btn = l.audio ? '<button class="vplay" type="button" data-i="' + TR.lines.indexOf(l) + '" aria-label="' + (isSpk ? "Stop this recording" : "Play this recording") + '" title="' + (isSpk ? "Stop the recording" : "Play the recording") + '">' + (isSpk ? "&#9632;" : "&#9654;") + '</button>' : "";
+      var sp = isSpk ? " speaking" : "";
       return '<div class="vl ' + cls + sp + '"><span class="vt">' + fmtGET(l.get) + '</span><span class="vw ' + role + '">' + esc(l.who) + '</span><span class="vx">' + btn + esc(l.text) + (l.kind === "onboard" ? '<span class="ob">onboard recorder</span>' : "") + src + "</span></div>";
     }).join("") + (voice.blocked ? '<div class="hint">Your browser held back the sound. Press Play to continue with the real voices.</div>' : "");
   }
@@ -7570,13 +7627,23 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
 
   function setPlaying(p) {
     state.playing = p && state.play < TOTAL;
-    if (!state.playing && voice.el && !voice.manual) { try { voice.el.pause(); } catch (e) {} } // resumes with Play
+    if (!state.playing && voice.el && !voice.manual) {
+      try { voice.el.pause(); } catch (e) {} // resumes with Play
+    } else if (state.playing) {
+      if (voice.el && voice.el.paused) {
+        voice.blocked = false;
+        try { var pr = voice.el.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+      } else if (voice.blocked || (!voice.el && voice.queue.length)) {
+        voice.blocked = false;
+        nextClip();
+      }
+    }
     $("play-text").textContent = state.playing ? "Pause" : "Play";
     $("play").setAttribute("aria-label", state.playing ? "Pause" : "Play");
     $("play").classList.toggle("is-playing", state.playing);
     $("rec").classList.toggle("live", state.playing);
   }
-  $("play").addEventListener("click", function () { if (state.play >= TOTAL) state.play = 0; setPlaying(!state.playing); });
+  $("play").addEventListener("click", function () { if (state.play >= TOTAL) { state.play = 0; voiceSeeked(); } setPlaying(!state.playing); });
   function seekEvent(id, keepPlaying) {
     var e = EV[id]; if (!e) return;
     state.play = Math.min(TOTAL, getToPlay(e.get) + 0.002);
@@ -7604,7 +7671,7 @@ kbd { font-family: var(--font-mono); font-size: 11px; background: var(--panel-2)
   document.addEventListener("keydown", function (e) {
     var tag = (e.target && e.target.tagName) || "";
     if (tag === "SELECT" || tag === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
-    if (e.key === " " && tag !== "INPUT") { e.preventDefault(); if (state.play >= TOTAL) state.play = 0; setPlaying(!state.playing); }
+    if (e.key === " " && tag !== "INPUT") { e.preventDefault(); if (state.play >= TOTAL) { state.play = 0; voiceSeeked(); } setPlaying(!state.playing); }
     else if (e.key === "ArrowRight" && tag !== "INPUT") { e.preventDefault(); stepEvent(1); }
     else if (e.key === "ArrowLeft" && tag !== "INPUT") { e.preventDefault(); stepEvent(-1); }
   });

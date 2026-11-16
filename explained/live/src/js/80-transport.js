@@ -26,13 +26,23 @@
 
   function setPlaying(p) {
     state.playing = p && state.play < TOTAL;
-    if (!state.playing && voice.el && !voice.manual) { try { voice.el.pause(); } catch (e) {} } // resumes with Play
+    if (!state.playing && voice.el && !voice.manual) {
+      try { voice.el.pause(); } catch (e) {} // resumes with Play
+    } else if (state.playing) {
+      if (voice.el && voice.el.paused) {
+        voice.blocked = false;
+        try { var pr = voice.el.play(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+      } else if (voice.blocked || (!voice.el && voice.queue.length)) {
+        voice.blocked = false;
+        nextClip();
+      }
+    }
     $("play-text").textContent = state.playing ? "Pause" : "Play";
     $("play").setAttribute("aria-label", state.playing ? "Pause" : "Play");
     $("play").classList.toggle("is-playing", state.playing);
     $("rec").classList.toggle("live", state.playing);
   }
-  $("play").addEventListener("click", function () { if (state.play >= TOTAL) state.play = 0; setPlaying(!state.playing); });
+  $("play").addEventListener("click", function () { if (state.play >= TOTAL) { state.play = 0; voiceSeeked(); } setPlaying(!state.playing); });
   function seekEvent(id, keepPlaying) {
     var e = EV[id]; if (!e) return;
     state.play = Math.min(TOTAL, getToPlay(e.get) + 0.002);
@@ -60,7 +70,7 @@
   document.addEventListener("keydown", function (e) {
     var tag = (e.target && e.target.tagName) || "";
     if (tag === "SELECT" || tag === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
-    if (e.key === " " && tag !== "INPUT") { e.preventDefault(); if (state.play >= TOTAL) state.play = 0; setPlaying(!state.playing); }
+    if (e.key === " " && tag !== "INPUT") { e.preventDefault(); if (state.play >= TOTAL) { state.play = 0; voiceSeeked(); } setPlaying(!state.playing); }
     else if (e.key === "ArrowRight" && tag !== "INPUT") { e.preventDefault(); stepEvent(1); }
     else if (e.key === "ArrowLeft" && tag !== "INPUT") { e.preventDefault(); stepEvent(-1); }
   });

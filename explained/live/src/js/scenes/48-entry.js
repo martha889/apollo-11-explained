@@ -451,8 +451,13 @@
       FX.glowDot(eiX, eiY, 3.2, C.amber);
       label("EI GATE", eiX + 8, eiY - 6, C.amber, "left");
 
+      var sEI0 = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], EV["entry-interface"].get);
+      var sEI1 = sampleTrack(tr.get, [["x", tr.x], ["y", tr.y]], EV["entry-interface"].get + 6);
+      var toEiAng = Math.atan2(c.Y(sEI1.y) - c.Y(sEI0.y), c.X(sEI1.x) - c.X(sEI0.x));
+      var eiSlope = (sEI1.y - sEI0.y) / (sEI1.x - sEI0.x);
+
       var cmWorldX = -240 * (1 - uPre);
-      var cmWorldY = 121.92 + 12 * (1 - uPre);
+      var cmWorldY = tr.y[0] + cmWorldX * eiSlope;
       var cmX = c.X(cmWorldX), cmY = c.Y(cmWorldY);
 
       ctx.save();
@@ -460,7 +465,7 @@
       ctx.globalAlpha = 0.45;
       ctx.setLineDash([3, 4]);
       ctx.beginPath();
-      ctx.moveTo(c.X(-320), c.Y(138));
+      ctx.moveTo(c.X(-280), c.Y(tr.y[0] - 280 * eiSlope));
       ctx.lineTo(eiX, eiY);
       ctx.stroke();
       ctx.restore();
@@ -482,9 +487,8 @@
       ctx.restore();
       text("SM JETTISONED (ILLUSTRATIVE)", smX + 10, smY + 4, { size: 9.5, weight: 600, color: C.muted, font: "Barlow Condensed, Arial Narrow, sans-serif" });
 
-      var toEiAng = Math.atan2(eiY - c.Y(138), eiX - c.X(-320));
       marker(cmX, cmY, C.csm, "Columbia (CM)", { dx: 14, dy: 4, align: "left" });
-      FX.craft("cm", cmX, cmY, toEiAng + Math.PI, 1.15);
+      FX.craft("cm", cmX, cmY, toEiAng + Math.PI, 1.18);
     } else {
       var px = c.X(s.x), py = c.Y(s.y);
       var gAhead = Math.min(tr.get[tr.get.length - 1], g + 6);
